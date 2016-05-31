@@ -1,0 +1,1 @@
+  MOV AL, 10  ; transfer value 10 into AL register
