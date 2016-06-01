@@ -14,6 +14,10 @@ import constants as c
 import COMMAND
 
 
+# GLOBAL VARIABLES
+# ----------------------------------------------------------------------- #
+timeslice = 10
+
 # DISK MEMORY
 # ----------------------------------------------------------------------- #
 
@@ -48,7 +52,10 @@ reg = {
 
 # PROCESS LOADER
 # ----------------------------------------------------------------------- #
-# create an example process, load from file
+# load example processes 'into disk'
+#   simulate processes stored in disk; assign disk addresses and etc
+
+# regex expressions to remove the superfluous stuff
 # strip all comments, note that the comments begin with a ';' semicolon
 dcomment  = '([\s]+;[\w\W\s]+)$'
 # split instructions delimited by white spaces and commas
@@ -63,6 +70,7 @@ dNum = re.compile('''^(
                         B|              # or ends with a B (ie: binary),
                         (?<![a-fA-F])$  # or does NOT end in a-fA-F (ie: decimal)
                       )$''', re.VERBOSE)
+
 # function call within the loading function, converts numbers to decimal base
 def convertToDecimal(matchobj, arg):
   if(matchobj == None):
