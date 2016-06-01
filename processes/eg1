@@ -1,3 +1,4 @@
-  LD B, 10    ; transfer value 10 into register B
-  LD C, 0FFH  ; transfer value 255 into register C
-  LD D, 1101B ; transfer value 13 into register D
+  LD    B, 10     ; transfer value 10 into register B
+  LD    C, 0FFH   ; transfer value 255 into register C
+  LD    D, 1101B  ; transfer value 13 into register D
+  ADD   B, D      ; add value in register D to that in B
