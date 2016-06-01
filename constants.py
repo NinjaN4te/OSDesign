@@ -32,3 +32,7 @@ Z = 7
 N = 6
 H = 5
 C = 4
+
+AFFC = -2 # the default input value, indicates that the flag is affected by the operation
+UNAF = -1 # specifies that the corresponding flag is not affected by the operation
+
