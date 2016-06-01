@@ -12,6 +12,8 @@ import re
 # user libraries/scripts
 import constants as c
 import COMMAND
+import Disk
+import ProcessLoader
 
 
 # GLOBAL VARIABLES
@@ -20,6 +22,8 @@ timeslice = 10
 
 # DISK MEMORY
 # ----------------------------------------------------------------------- #
+# this list will contain the entirety of the physical addresses of the disk memory
+disk = Disk.Disk()
 
 
 # MAIN MEMORY / REAL MEMORY
@@ -52,54 +56,8 @@ reg = {
 
 # PROCESS LOADER
 # ----------------------------------------------------------------------- #
-# load example processes 'into disk'
-#   simulate processes stored in disk; assign disk addresses and etc
-
-# regex expressions to remove the superfluous stuff
-# strip all comments, note that the comments begin with a ';' semicolon
-dcomment  = '([\s]+;[\w\W\s]+)$'
-# split instructions delimited by white spaces and commas
-delim   = '[\s,]+'
-# convert all pure numbers to base 10 (decimal) as a xmpz object from gmpy2 library
-dNum = re.compile('''^(
-                        [0-9]+          # starts with one or more 0-9s,
-                        [0-9a-fA-F]*    # then contains zero or more 0-9a-fA-F,
-                      )                 # and
-                      (                 # ...
-                        H|              # ends with an H (ie: hex),
-                        B|              # or ends with a B (ie: binary),
-                        (?<![a-fA-F])$  # or does NOT end in a-fA-F (ie: decimal)
-                      )$''', re.VERBOSE)
-
-# function call within the loading function, converts numbers to decimal base
-def convertToDecimal(matchobj, arg):
-  if(matchobj == None):
-    # if no match, then return back original argument
-    return arg
-  # otherwise, convert different base numeral to decimal
-  if(matchobj.group(2)=='H'):
-    # Hexadecimal
-    return xmpz(int(matchobj.group(1), 16))
-  elif(matchobj.group(2)=='B'):
-    # Binary
-    return xmpz(int(matchobj.group(1), 2))
-  else:
-    # Decimal
-    return xmpz(int(matchobj.group(1)))
-
-# read in file as process; load in instructions
-with open('./processes/eg1') as file: instr = (
-            [[
-            # convert hex and binary to decimal
-            (lambda match = dNum.fullmatch(args):
-                  convertToDecimal(match, args))()
-            # split labels from mnemonics from operands
-            for args in re.split( delim,
-                # remove comments
-                re.sub( dcomment, '', line.rstrip('\n') )
-            )]
-          for line in file] )
-
+# load the sample process files located in './processes' 'into disk'
+instr = ProcessLoader.LoadProcessesIntoDiskAsInstruction(disk)
 
 # INSTRUCTION DECODER
 # ----------------------------------------------------------------------- #
@@ -117,8 +75,7 @@ def printRegisters():
     'D: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(reg['D'])) + '\n' + 
     'E: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(reg['E'])) + '\n' + 
     'H: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(reg['H'])) + '\n' + 
-    'L: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(reg['L'])) + '\n' + 
-                                                              '\n'
+    'L: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(reg['L'])) + '\n'
   )
   # flag register
   print('   ZNHC0000')

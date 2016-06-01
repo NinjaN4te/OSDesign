@@ -1,0 +1,9 @@
+  LD    B, 0      ; transfer value 1 into register B
+  LD    C, 5H     ; transfer value 5 into register C
+  LD    D, 101B   ; transfer value 5 into register D
+  ADD   B, D      ; add value in register D to that in B, ie: 0+5
+  ADD   C, D      ; add value in register D to that in C, ie: 5+5
+
+                  ; testing whitespace
+  ADD   B, C
+  ADD   A, B      ; add value in register B to that in A
