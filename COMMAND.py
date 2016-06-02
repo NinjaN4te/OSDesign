@@ -1,7 +1,16 @@
 # INSTRUCTION DECODER
 # ----------------------------------------------------------------------- #
-import constants as c
+# decodes and executes an assembly instruction
+
+
+# LIBRARIES
+# ----------------------------------------- #
 from gmpy2 import xmpz
+
+# user libraries/modules
+import bitstring as bs
+import constants as c
+import xmpzfunctions as xf
 
 # regular integer values are decimal, while hex is appended by H, binary with B
 #   note, all numerical values must start with a number from 0-9! hence, 0FFH
@@ -67,56 +76,6 @@ def updateFlags(flags, res, opr, Z=c.AFFC, N=c.AFFC, H=c.AFFC, C=c.AFFC):
   flags[ c.H ] = H
   flags[ c.C ] = C
 
-# BOOLEAN MASK OPERATIONS
-# boolean AND
-def maskAND(b1, b2):
-  ret = xmpz(0)
-  for p in range(0, max(b1.bit_length(), b2.bit_length())):
-    if(b1[p] == 1 and b2[p] == 1):
-      ret[p] = 1
-    else:
-      ret[p] = 0
-  return ret
-
-def maskOR(b1, b2):
-  ret = xmpz(0)
-  for p in range(0, 8):
-    if(b1[p] == 1 or b2[p] == 1):
-      ret[p] = 1
-    else:
-      ret[p] = 0
-  return ret
-
-def maskXOR(b1, b2):
-  ret = xmpz(0)
-  for p in range(0, max(b1.bit_length(), b2.bit_length())):
-    if(b1[p] != b2[p]):
-      ret[p] = 1
-    else:
-      ret[p] = 0
-  return ret
-
-# bitwise operations
-def leftShift(b1, n, trunc=True):
-  stop = 0
-  # there is no need to iterate through all the bits, only 8-n bits
-  if(trunc == True):
-    # get the lower value
-    if(b1.bit_length()+n < 8-n):
-      stop = b1.bit_length()+n
-    else:
-      stop = 8-n
-  else:
-    # don't truncate
-    stop = b1.bit_length()+n
-  for p in reversed(range(n,stop)):
-    # shift to left by n
-    b1[p] = b1[p-n]
-  # set all lower bits under n to 0
-  b1[:n] = 0
-
-  
-
 
 # LOAD COMMANDS
 # 1. LD r1, r2
@@ -148,9 +107,9 @@ def ADD(reg, instr):
     # n is a register
     carry = reg[ n ]                    # store the operand as the carry
     while(carry != 0):                  # loop until carry is zero, ie: addition complete!
-      tSum = maskXOR(reg[ A ], carry)   # new temporary sum w/out carry is XOR between reg and carry
-      carry = maskAND(reg[ A ], carry)  # get new carry between the previous sum and carry
-      leftShift(carry, 1, trunc=False)  #   left shift by one to position over next digit
+      tSum = xf.maskXOR(reg[ A ], carry)   # new temporary sum w/out carry is XOR between reg and carry
+      carry = xf.maskAND(reg[ A ], carry)  # get new carry between the previous sum and carry
+      xf.leftShift(carry, 1, trunc=False)  #   left shift by one to position over next digit
       reg[ A ] = tSum                   # store new temporary sum in register
     updateFlags(reg['F'], reg[ A ], reg[ n ])
 
