@@ -6,58 +6,15 @@
 
 # LIBRARIES
 # ----------------------------------------------------------------------- #
-from gmpy2 import xmpz
-import re
-
 # user libraries/scripts
-import constants as c
-import COMMAND
-import CPU
-import Disk
-import ProcessLoader
-
+import System
 
 # GLOBAL VARIABLES
 # ----------------------------------------------------------------------- #
-timeslice = 10
-
-# DISK MEMORY
-# ----------------------------------------------------------------------- #
-# this list will contain the entirety of the physical addresses of the disk memory
-disk = Disk.Disk()
 
 
-# MAIN MEMORY / REAL MEMORY
-# ----------------------------------------------------------------------- #
+# create a system object and let it handle the rest
+sys = System.System()
+sys.Start()
 
-
-# SAMPLE PROCESS
-# ----------------------------------------------------------------------- #
-
-
-# PROCESS LOADER
-# ----------------------------------------------------------------------- #
-# load the sample process files located in './processes' 'into disk'
-ProcessLoader.LoadProcessesIntoDiskAsInstruction(disk)
-
-
-# SAMPLE PROCESSOR
-# ----------------------------------------------------------------------- #
-# create new cpu object
-cpu = CPU.CPUModel(disk)
-
-
-# INSTRUCTION DECODER
-# ----------------------------------------------------------------------- #
-
-
-
-
-# start the cpu
-cpu.start()
-
-
-
-#print(instr)
-#print(reg)
-cpu.printRegisters()
+sys.cpu.printRegisters()

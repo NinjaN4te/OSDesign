@@ -20,7 +20,7 @@ import OpCodes
 # DISK CLASS
 # ----------------------------------------------------------------------- #
 class Disk(object):
-  def __init__(self):
+  def __init__(self, system):
     # this member will contain the entirety of the physical addresses of the disk memory
     self.diskMem = xmpz(0)
     # index to the next free actual physical address of diskMem
@@ -28,6 +28,8 @@ class Disk(object):
     self.index = 0
     # keep track of size of diskMem in terms of bytes
     self.numBytes = 0
+    # hold a reference to the system object this class belongs to
+    self.sys = system
 
   # return the disk memory object
   def getDiskMem(self):
@@ -80,5 +82,11 @@ class Disk(object):
     # return a byte sized view displaced by index
     return self.diskMem[index:index+c.WORD]
 
+  def start(self):
+    # create the new task for this disk object
+    self.sys.tm.new(self.run())
 
+  # the run loop of the disk in the program
+  def run(self):
+    yield
 

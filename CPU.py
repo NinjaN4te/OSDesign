@@ -14,6 +14,7 @@ from gmpy2 import xmpz
 import constants as c
 import COMMAND
 import Disk
+import mpModules
 import OpCodes
 import xmpzfunctions as xf
 
@@ -78,25 +79,37 @@ class GenericBus(object):
     self.size = size
     # the data deposited in the bus
     self.bus = xmpz(0)
+    # source and destination modules, use with constants in the constants.py file
+    self.src = ''
+    self.dst = ''
+    # if bus is being used, it is busy and cannot be used by some other module
+    self.busy = False
 
   # deposit data into the bus to transfer around
-  def deposit(self, data):
+  def deposit(self, data, src, dst):
     self.bus[:] = 0   # clear bus
     xf.maskOR_in(self.bus, data, ret=false)
+    self.src=src
+    self.dst=dst
 
   # read data in the bus; return the data
   def read(self):
     return self.data
 
 class CPUModel(object):
-  def __init__(self, disk):
-    # clock cycles
-    self.clock = 0
+  def __init__(self, system):
+    # clock cycles, also called states
+    self.ccycle = 1
+    # machine cycles, 4 clock cycles = 1 machine cycle
+    self.mcycle = 1
     # create buses
     self.addressBus = GenericBus(16)
     self.dataBus = GenericBus(c.WORD)
-    # give cpu a reference to disk, for now
-    self.disk = disk
+    # hold a reference to the system object to which this class belongs to
+    self.sys = system
+    # implementation of microprocessor modules of the cpu are kept separate
+    #   so create an object of it here
+    self.modules = mpModules.mpModules(self)
 
     #   REGISTERS
     self.reg = {
@@ -111,40 +124,38 @@ class CPUModel(object):
       # special registers
         'F' : xmpz(0),  # Flag register
         'SP': 0,  # Stack Pointer register
-        #'IC': 0,  # Instruction Counter register, points to next instruction to be executed
-        'PC': 0   # Program Counter register, cpu executes instruction at this location
+        'IR': 0,  # Instruction Register, stores copy of instruction to be executed
+        'PC': 0   # Program Counter register, holds address of next instruction to be executed
     }
-
-  # fetch decode execute
-  def fde(self):
-    while(self.reg['PC'] < self.disk.getNumBytes()):
-      try:
-        if(OpCodes.getNextOp() == True):
-          # fetch new instruction
-          #print('{:02X}'.format(self.disk.GetByteAt(reg['PC']*c.WORD)))
-          instr = OpCodes.parseByte(self.disk.GetByteAt(self.reg['PC']*c.WORD))
-        else:
-          # if not, then append operands to our instruction
-          instr.append(OpCodes.parseByte(self.disk.GetByteAt(self.reg['PC']*c.WORD)))
-        # check again to see if we can execute in same cycle
-        if(OpCodes.getNextOp() == True):
-          # execute instruction if we have the whole instruction in memory
-          instr = getattr(COMMAND, instr[1])(self.reg,instr)
-      except AttributeError:
-        # if failed, then throw error
-        print('\n/!\\/!\\/!\\ ERROR /!\\/!\\/!\\')
-        print('Error executing instruction: ' + str(instr[self.reg['PC']]))
-        print('PC at ' + str(self.reg['PC']))
-        print('')
-        raise
-
-      # increment Program Counter
-      self.reg['PC'] += 1
-
 
   # start the cpu
   def start(self):
-    self.fde()
+    # --- #
+    # create all the modules of the microprocessor as separate concurrent tasks.
+    #   refer to diagram above
+
+    self.sys.tm.new(self.modules.A())   # A
+    self.sys.tm.new(self.modules.ACT()) # ACT
+    self.sys.tm.new(self.modules.CU())  # CU, control unit
+    self.sys.tm.new(self.modules.CTRL())# CTRL, control section
+    self.sys.tm.new(self.modules.RAM()) # RAM
+    self.sys.tm.new(self.modules.TMP()) # TMP
+    # --- #
+
+  # increment the clock cycles (or states) and the machine cycles.
+  #   here 4 clock cycles = 1 machine cycles
+  #   this is our discrete time quantum
+  def runClock(self):
+    self.ccycle += 1
+    if(self.ccycle > 4):
+      self.ccycle -= 4
+      self.mcycle += 1
+
+  # reset the machine and clock cycle counters,
+  #   call at beginning of every new instruction fetching
+  def resetClock(self):
+    self.ccycle = 1
+    self.mcycle = 1
 
   # CONVENIENCE FUNCTIONS
   # ----------------------------------------------------------------------- #
