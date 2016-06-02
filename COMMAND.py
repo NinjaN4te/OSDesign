@@ -90,7 +90,6 @@ def maskOR(b1, b2):
 def maskXOR(b1, b2):
   ret = xmpz(0)
   for p in range(0, max(b1.bit_length(), b2.bit_length())):
-    #print(p)
     if(b1[p] != b2[p]):
       ret[p] = 1
     else:

@@ -1,4 +1,4 @@
-  LD    B, 254    ; transfer value 254 into register B
+  LD    B, 174    ; transfer value 174 into register B
   LD    C, 0FFH   ; transfer value 255 into register C
   LD    D, 1101B  ; transfer value 13 into register D
-  ADD   B, D      ; add value in register D to that in B, ie: 254+13
+  ADD   A, B      ; add value in register B to that in A, ie: 174+0

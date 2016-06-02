@@ -13,6 +13,7 @@ import re
 import constants as c
 import COMMAND
 import Disk
+import OpCodes
 import ProcessLoader
 
 
@@ -57,7 +58,7 @@ reg = {
 # PROCESS LOADER
 # ----------------------------------------------------------------------- #
 # load the sample process files located in './processes' 'into disk'
-instr = ProcessLoader.LoadProcessesIntoDiskAsInstruction(disk)
+ProcessLoader.LoadProcessesIntoDiskAsInstruction(disk)
 
 # INSTRUCTION DECODER
 # ----------------------------------------------------------------------- #
@@ -81,13 +82,24 @@ def printRegisters():
   print('   ZNHC0000')
   print('F: {:0>8b}'.format(int(reg['F'])))
 
+
 # run loop
-while(reg['PC'] < len(instr)):
+while(reg['PC'] < disk.getNumBytes()):
   try:
-    # decode instruction and execute
-    getattr(COMMAND, instr[reg['PC']][1])(reg,instr[reg['PC']])
+    if(OpCodes.getNextOp() == True):
+      # fetch new instruction
+      #print('{:02X}'.format(disk.GetByteAt(reg['PC']*c.WORD)))
+      instr = OpCodes.parseByte(disk.GetByteAt(reg['PC']*c.WORD))
+    else:
+      # if not, then append operands to our instruction
+      instr.append(OpCodes.parseByte(disk.GetByteAt(reg['PC']*c.WORD)))
+    # check again to see if we can execute in same cycle
+    if(OpCodes.getNextOp() == True):
+      # execute instruction if we have the whole instruction in memory
+      instr = getattr(COMMAND, instr[1])(reg,instr)
   except AttributeError:
     # if failed, then throw error
+    print('\n/!\\/!\\/!\\ ERROR /!\\/!\\/!\\')
     print('Error executing instruction: ' + str(instr[reg['PC']]))
     print('PC at ' + str(reg['PC']))
     print('')

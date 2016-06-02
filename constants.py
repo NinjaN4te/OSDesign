@@ -1,5 +1,10 @@
 # CONSTANTS
 
+# DISK
+# the word size of the cpu architecture
+WORD      = 8
+
+
 # INSTRUCTION DECODER
 # instructions have the form:
 #   [LABEL] mnemonic [ARG1, ARG2, ...]

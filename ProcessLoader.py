@@ -61,7 +61,8 @@ def LoadProcessesIntoDiskAsInstruction(disk):
   # read in file as process; load in instructions
   with open('./processes/eg1') as file:
     ( [
-      OpCodes.StoreInstructionToDisk(
+      # store the instruction as byte-sized opcodes&operands to disk
+      disk.StoreInstructionToDisk(
       # convert hex and binary to decimal
       [(lambda match = dNum.fullmatch(args):
             convertToDecimal(match, args))()
@@ -69,6 +70,6 @@ def LoadProcessesIntoDiskAsInstruction(disk):
       for args in re.split( delim,
         # remove comments
         re.sub( dcomment, '', line.rstrip('\n') )
-      )], disk)
+      )])
     for line in file] )   # repeat for every line in the file,
                           #   note that every line is only one instruction in my examples
