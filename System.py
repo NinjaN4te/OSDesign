@@ -10,6 +10,7 @@
 import re
 
 # user libraries/scripts
+import Assembler
 import constants as c
 import COMMAND
 import CPU
@@ -41,7 +42,10 @@ class System(object):
     # PROCESS LOADER
     # ----------------------------------------------------------------------- #
     # load the sample process files located in './processes' 'into disk'
-    ProcessLoader.LoadProcessesIntoDiskAsInstruction(self.disk)
+    assembler = Assembler.Assembler()
+    assembler.Assemble()
+    processLoader = ProcessLoader.ProcessLoader()
+    processLoader.LoadProcessesIntoDisk(self.disk)
 
     # SAMPLE PROCESSOR
     # ----------------------------------------------------------------------- #

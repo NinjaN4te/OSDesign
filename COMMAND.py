@@ -102,10 +102,18 @@ def ADD(reg, instr):
   try:
     # n is a number, '#'
     reg[ A ] += n
-    updateFlags(reg['F'], reg[ A ], n)
+    print('ADD not yet implemented')
+    raise
+    #updateFlags(reg['F'], reg[ A ], n)
   except TypeError:
     # n is a register
-    reg[ A ] += reg[ n ]
+    reg[ A ] = np.bitwise_xor(reg[ A ], reg[ n ])
+    carry = reg[ n ]                    # store the operand as the carry
+    while(np.any(carry)):               # loop until carry is zero, ie: addition complete!
+      tSum = np.bitwise_xor(reg[ A ], carry)# new temporary sum w/out carry is XOR between reg and carry
+      carry = np.bitwise_and(reg[ A ], carry)  # get new carry between the previous sum and carry
+      bf.leftShift(carry, 1)  #   left shift by one to position over next digit
+      reg[ A ] = tSum                   # store new temporary sum in register
     updateFlags(reg['F'], reg[ A ], reg[ n ])
 
 

@@ -53,8 +53,7 @@ class mpModules(object):
   #   the entire system. it will perform the memory  fetch and decode the contents of
   #   the IR to give the correct sequence of internal and external signals for the
   #   controller sequencer to dispatch (ie: which executes the instruction)
-  #   in addition, the CU also is programmed to 'know' how many words each instruction
-  #   has so it fetches the correct number of bytes for every instruction. it is also
+  #   in addition, the CU also is programmed to 'know' how many words each instruction #   has so it fetches the correct number of bytes for every instruction. it is also
   #   the one that pipelines the instruction executions to save clock cycles, like the
   #   ADD r example in the reference, ie: whether overlap is possible. Only the CU can
   #   see the W and Z registers. it also knows when a jump was made and behaves accordingly

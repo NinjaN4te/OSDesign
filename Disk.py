@@ -38,41 +38,22 @@ class Disk(object):
   def getNumBytes(self):
     return self.numBytes
 
-  # called from StoreInstructionToDisk
-  #   simply transfer the byte into a byte sized window starting at self.index
-  # args:
-  #   byte: a ConstBitArray
-  def storeProcessInDiskMemory(self, byte):
-    # iterate over ConstBitStream, transfer into disk.
+  # StoreByteToDisk
+  # called from LoadProcessesIntoDisk() from ProcessLoader.
+  #   args: a byte of data, which is a machine code instruction,
+  #   and then stores it as machine code 'to disk'
+  def StoreByteToDisk(self, program):
+    # transfer into disk.
     #   for the purposes of the simulation, these processes will
     #   be stored sequentially on disk. Possibility for change at later time (?)
-      # note, ConstBitStream reads left to right! ie: it 'appears' like little-endian
-    #self.diskMem[self.index:self.index+c.WORD] = byte
-    self.diskMem[self.index:self.index+byte.size] = byte
+    # convert to binary representation
+    binprogram = np.unpackbits(program.astype(np.uint8))
+    # store binary sequence on disk
+    self.diskMem[self.index:self.index+binprogram.size] = binprogram
     # increment the index to next available address
-    #self.index += c.WORD
-    self.index += byte.size
-    self.numBytes += 1
-    
-
-  # StoreInstructionToDisk
-  # called from LoadProcessesIntoDiskAsInstruction() from the ProcessLoader module.
-  #   this takes as an argument a single line of an instruction from that function
-  #   and then stores it as machine code 'to disk'
-  def StoreInstructionToDisk(self, instr):
-    try:
-      # convert instruction into opcode & operands,
-      #   which is pure binary, ie: machine code
-      bytelist = getattr(OpCodes, instr[ c.MNEMONIC ])(instr)
-    except AttributeError:
-      # if failed, then throw error
-      print('\n/!\\/!\\/!\\ ERROR /!\\/!\\/!\\')
-      print('Error in storing instruction: ' + str(instr))
-      print('')
-      raise
-
-    for byte in bytelist:
-      self.storeProcessInDiskMemory(byte)
+    self.index += binprogram.size
+    # increase the number of bytes occupied on disk
+    self.numBytes += program.size
 
   def GetByteAt(self, index):
     # return a byte sized view displaced by index
