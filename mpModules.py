@@ -139,7 +139,7 @@ class mpModules(object):
   def fetch(self):
     # deposit PC onto Address Bus
     #   destination is memory
-    self.cpu.addressBus.deposit(self.cpu.reg['PC'], c.mCU, c.mMM)
+    #self.cpu.addressBus.deposit(self.cpu.reg['PC'], c.mCU, c.mMM)
     print('fetch')
   def incPC(self):
     print('incPC')

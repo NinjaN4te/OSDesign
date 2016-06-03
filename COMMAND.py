@@ -5,12 +5,11 @@
 
 # LIBRARIES
 # ----------------------------------------- #
-from gmpy2 import xmpz
+import numpy as np
 
 # user libraries/modules
-import bitstring as bs
 import constants as c
-import xmpzfunctions as xf
+import BinaryFunctions as bf
 
 # regular integer values are decimal, while hex is appended by H, binary with B
 #   note, all numerical values must start with a number from 0-9! hence, 0FFH
@@ -47,7 +46,7 @@ def updateFlags(flags, res, opr, Z=c.AFFC, N=c.AFFC, H=c.AFFC, C=c.AFFC):
   # zero flag
   if(Z == c.UNAF): Z = flags[ c.Z ]
   elif(Z == c.AFFC):
-    if(res == 0):
+    if(np.sum(res, dtype=np.byte, axis=0) == 0):
       # set zero flag if the result is zero
       Z = 1     # zero flag
     else:
@@ -66,11 +65,12 @@ def updateFlags(flags, res, opr, Z=c.AFFC, N=c.AFFC, H=c.AFFC, C=c.AFFC):
   # carry flag
   if(C == c.UNAF): C = flags[ c.C ]
   elif(C == c.AFFC):
-    if(res[8] == 1):
+    #if(res[8] == 1):
       # set carry flag if the (n+1)th bit is set after an n-bit operation
-      C = 1     # carry flag
-    else:
-      C = 0
+      #C = 9     # carry flag
+    C = 9     # carry flag
+    #else:
+    #  C = 0
   flags[ c.Z ] = Z
   flags[ c.N ] = N
   flags[ c.H ] = H
@@ -105,17 +105,8 @@ def ADD(reg, instr):
     updateFlags(reg['F'], reg[ A ], n)
   except TypeError:
     # n is a register
-    carry = reg[ n ]                    # store the operand as the carry
-    while(carry != 0):                  # loop until carry is zero, ie: addition complete!
-      tSum = xf.maskXOR(reg[ A ], carry)   # new temporary sum w/out carry is XOR between reg and carry
-      carry = xf.maskAND(reg[ A ], carry)  # get new carry between the previous sum and carry
-      xf.leftShift(carry, 1, trunc=False)  #   left shift by one to position over next digit
-      reg[ A ] = tSum                   # store new temporary sum in register
+    reg[ A ] += reg[ n ]
     updateFlags(reg['F'], reg[ A ], reg[ n ])
-
-  # unset any bits higher than the 7th, ie: more than 1 byte
-  reg[ A ][8:] = 0
-    
 
 
 

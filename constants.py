@@ -15,7 +15,10 @@ mMM   = 'MAIN MEMORY'
 
 # DISK
 # the word size of the cpu architecture
-WORD      = 8
+WORD      = 8   # 8 bits
+DWORD     = 16  # two WORDs are 16 bits
+# the disk will have a size of 512 kilobytes, the size of super mario bros 2
+DISKSIZE  = 512*1000
 
 
 # INSTRUCTION DECODER

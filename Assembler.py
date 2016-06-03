@@ -1,22 +1,18 @@
 # ----------------------------------------------------------------------- #
-# PROCESS LOADER
+# ASSEMBLER
 # ----------------------------------------------------------------------- #
-# load example processes 'into disk'
-#   simulate processes stored in disk; assign disk addresses and etc
+# a simple assembler for converting the example programs in processes into machine code
+#   store these files in processes/machine_code
 
 
 # LIBRARIES
 # ----------------------------------------- #
-from gmpy2 import xmpz
-import re
 
 # user libraries/scripts
-import constants as c
-import COMMAND
+
 
 # GLOBAL VARIABLES
 # ----------------------------------------------------------------------- #
-
 
 # regex expressions to remove the superfluous stuff
 # strip all comments, note that the comments begin with a ';' semicolon

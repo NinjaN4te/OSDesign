@@ -6,12 +6,11 @@
 
 # LIBRARIES
 # ----------------------------------------- #
-from gmpy2 import xmpz
+import numpy as np
 
 
 # user libraries/scripts
 import constants as c
-from bitstring import ConstBitStream
 
 
 # GLOBAL VARIABLES
@@ -42,16 +41,16 @@ def LD(instr):
   r2 = instr[ c.ARG2 ]
   def switcher(arg):
     d = {
-      'B': ConstBitStream(hex='06'),
-      'C': ConstBitStream(hex='0E'),
-      'D': ConstBitStream(hex='16'),
-      'E': ConstBitStream(hex='1E'),
-      'H': ConstBitStream(hex='26'),
-      'L': ConstBitStream(hex='2E')
+      'B': np.unpackbits(np.array([int('06', 16)],dtype=np.uint8)).astype(np.byte),
+      'C': np.unpackbits(np.array([int('0E', 16)],dtype=np.uint8)).astype(np.byte),
+      'D': np.unpackbits(np.array([int('16', 16)],dtype=np.uint8)).astype(np.byte), 
+      'E': np.unpackbits(np.array([int('1E', 16)],dtype=np.uint8)).astype(np.byte),
+      'H': np.unpackbits(np.array([int('26', 16)],dtype=np.uint8)).astype(np.byte),
+      'L': np.unpackbits(np.array([int('2E', 16)],dtype=np.uint8)).astype(np.byte),
     }
     return d.get(arg, 'ERROR')
   bytelist.append(switcher(r1))
-  bytelist.append(ConstBitStream(uint=int(r2), length=8))
+  bytelist.append(np.unpackbits(np.array([int(r2)],dtype=np.uint8)).astype(np.byte))
   return bytelist
 
 # ARITHMETIC ALU OPERATIONS
@@ -66,13 +65,13 @@ def ADD(instr):
   # n is a register
   def switcher(arg):
     d = {
-      'A': ConstBitStream(hex='87'),
-      'B': ConstBitStream(hex='80'),
-      'C': ConstBitStream(hex='81'),
-      'D': ConstBitStream(hex='82'),
-      'E': ConstBitStream(hex='83'),
-      'H': ConstBitStream(hex='84'),
-      'L': ConstBitStream(hex='85')
+      'A': np.unpackbits(np.array([int('87', 16)],dtype=np.uint8)).astype(np.byte),
+      'B': np.unpackbits(np.array([int('80', 16)],dtype=np.uint8)).astype(np.byte),
+      'C': np.unpackbits(np.array([int('81', 16)],dtype=np.uint8)).astype(np.byte),
+      'D': np.unpackbits(np.array([int('82', 16)],dtype=np.uint8)).astype(np.byte),
+      'E': np.unpackbits(np.array([int('83', 16)],dtype=np.uint8)).astype(np.byte),
+      'H': np.unpackbits(np.array([int('84', 16)],dtype=np.uint8)).astype(np.byte),
+      'L': np.unpackbits(np.array([int('85', 16)],dtype=np.uint8)).astype(np.byte)
     }
     return d.get(arg, 'ERROR')
   bytelist.append(switcher(n))
@@ -115,7 +114,7 @@ def parseByte(byte):
         
       }
       return op.get(arg, [999, 'ERROR'])
-    byte = '{:02X}'.format(byte)
+    byte = '{:02X}'.format(np.packbits(byte)[0])
     ret = switcher(byte)
     operands = ret[0] - 1   # set the number of operands left
     # check if any operands left
@@ -132,7 +131,7 @@ def parseByte(byte):
     #   as the current instruction has been fully read
     if(operands <= 0):
       nextOp = True
-    return xmpz(byte)
+    return byte
 
 
 def getNextOp():

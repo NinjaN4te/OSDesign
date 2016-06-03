@@ -6,8 +6,7 @@
 
 # LIBRARIES
 # ----------------------------------------- #
-import bitstring as bs
-from gmpy2 import xmpz
+import numpy as np
 
 # user libraries/scripts
 import constants as c
@@ -22,7 +21,7 @@ import OpCodes
 class Disk(object):
   def __init__(self, system):
     # this member will contain the entirety of the physical addresses of the disk memory
-    self.diskMem = xmpz(0)
+    self.diskMem = np.zeros(c.DISKSIZE, dtype=np.byte)
     # index to the next free actual physical address of diskMem
     #   for purposes of the simulation, currently only increments, ie: only sequentially storing
     self.index = 0
@@ -47,15 +46,12 @@ class Disk(object):
     # iterate over ConstBitStream, transfer into disk.
     #   for the purposes of the simulation, these processes will
     #   be stored sequentially on disk. Possibility for change at later time (?)
-    try:
-      for bit in reversed(range(self.index, self.index + c.WORD)):
-        # note, ConstBitStream reads left to right! ie: it 'appears' like little-endian
-        self.diskMem[bit] = byte.read('bool')
-    except bs.ReadError:
-      # reading a ConstBitStream out of scope will throw this error, so then stop
-      pass
+      # note, ConstBitStream reads left to right! ie: it 'appears' like little-endian
+    #self.diskMem[self.index:self.index+c.WORD] = byte
+    self.diskMem[self.index:self.index+byte.size] = byte
     # increment the index to next available address
-    self.index += c.WORD
+    #self.index += c.WORD
+    self.index += byte.size
     self.numBytes += 1
     
 

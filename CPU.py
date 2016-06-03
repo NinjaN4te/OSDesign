@@ -8,7 +8,7 @@
 
 # LIBRARIES
 # ----------------------------------------- #
-from gmpy2 import xmpz
+import numpy as np
 
 # user libraries/scripts
 import constants as c
@@ -16,7 +16,6 @@ import COMMAND
 import Disk
 import mpModules
 import OpCodes
-import xmpzfunctions as xf
 
 
 # GLOBAL VARIABLES
@@ -60,7 +59,7 @@ import xmpzfunctions as xf
 #    ||    ||                | |                               16 BITS           |F |  .
 #    ||    ||                | '-------------------------------------------------|F |--'\ ADDRESS
 #    ||    ||                '---------------------------------------------------|E |--./   BUS
-#    ||    ||                                                                    |R |  '
+#    ||    ||                *                                                   |R |  '
 #    ||    ||                                                                    '--'
 #    ||    ||____________________________________________________________________________  \
 #    ||    '----------------------------------------------------------------------------+   | CONTROL
@@ -77,8 +76,8 @@ class GenericBus(object):
   def __init__(self, size):
     # size of the bus
     self.size = size
-    # the data deposited in the bus
-    self.bus = xmpz(0)
+    # the bus will hold data to be transferred between modules
+    self.bus = np.zeros(size, dtype=np.byte)
     # source and destination modules, use with constants in the constants.py file
     self.src = ''
     self.dst = ''
@@ -87,8 +86,8 @@ class GenericBus(object):
 
   # deposit data into the bus to transfer around
   def deposit(self, data, src, dst):
-    self.bus[:] = 0   # clear bus
-    xf.maskOR_in(self.bus, data)
+    self.bus.fill(0)   # clear bus
+    self.bus[0:data.size] = data
     self.src=src
     self.dst=dst
 
@@ -114,18 +113,21 @@ class CPUModel(object):
     #   REGISTERS
     self.reg = {
       # general purpose registers
-        'A' : xmpz(0),
-        'B' : xmpz(0),
-        'C' : xmpz(0),
-        'D' : xmpz(0),
-        'E' : xmpz(0),
-        'H' : xmpz(0),
-        'L' : xmpz(0),
+        'A' : np.zeros(c.WORD, dtype=np.byte),
+        'B' : np.zeros(c.WORD, dtype=np.byte),
+        'C' : np.zeros(c.WORD, dtype=np.byte),
+        'D' : np.zeros(c.WORD, dtype=np.byte),
+        'E' : np.zeros(c.WORD, dtype=np.byte),
+        'H' : np.zeros(c.WORD, dtype=np.byte),
+        'L' : np.zeros(c.WORD, dtype=np.byte),
       # special registers
-        'F' : xmpz(0),  # Flag register
-        'SP': xmpz(0),  # Stack Pointer register
-        'IR': xmpz(0),  # Instruction Register, stores copy of instruction to be executed
-        'PC': xmpz(0)   # Program Counter register, holds address of next instruction to be executed
+        'F' : np.zeros(c.WORD, dtype=np.byte),  # Flag register
+        'SP': np.zeros(c.DWORD, dtype=np.byte), # Stack Pointer register
+        'IR': np.zeros(c.WORD, dtype=np.byte),  # Instruction Register,
+                                                #   stores copy of instruction to be executed
+        #'PC': np.zeros(c.DWORD, dtype=np.byte)  # Program Counter register,
+                                                #   holds address of next instruction to be executed
+        'PC': 0
     }
 
   # start the cpu
@@ -163,17 +165,17 @@ class CPUModel(object):
   def printRegisters(self):
     print(
       # general registers
-      'A: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['A'])) + '\n' + 
-      'B: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['B'])) + '\n' + 
-      'C: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['C'])) + '\n' + 
-      'D: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['D'])) + '\n' + 
-      'E: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['E'])) + '\n' + 
-      'H: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['H'])) + '\n' + 
-      'L: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(int(self.reg['L'])) + '\n'
+      'A: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['A'])[0]) + '\n' + 
+      'B: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['B'])[0]) + '\n' + 
+      'C: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['C'])[0]) + '\n' + 
+      'D: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['D'])[0]) + '\n' + 
+      'E: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['E'])[0]) + '\n' + 
+      'H: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['H'])[0]) + '\n' + 
+      'L: {0:>4d}  {0:0>8b}  {0:^#6x}'.format(np.packbits(self.reg['L'])[0]) + '\n'
     )
     # flag register
     print('   ZNHC0000')
-    print('F: {:0>8b}'.format(int(self.reg['F'])))
+    print('F: {:0>8b}'.format(np.packbits(self.reg['F'])[0]))
 
 
 
