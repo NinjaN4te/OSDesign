@@ -101,6 +101,7 @@ def parseByte(byte):
         '26': [2, ['', 'LD', 'H']], #   H,n
         '2E': [2, ['', 'LD', 'L']], #   L,n
 
+
       # ARITHEMTIC ALU OPERATIONS
       # 1. ADD A,n
       #     1 byte, 4 cycles

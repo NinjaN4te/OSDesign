@@ -49,7 +49,7 @@ class Disk(object):
     #   be stored sequentially on disk. Possibility for change at later time (?)
     try:
       for bit in reversed(range(self.index, self.index + c.WORD)):
-        # note, xmpz object grows to the left! ie: little-endian
+        # note, ConstBitStream reads left to right! ie: it 'appears' like little-endian
         self.diskMem[bit] = byte.read('bool')
     except bs.ReadError:
       # reading a ConstBitStream out of scope will throw this error, so then stop

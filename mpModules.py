@@ -37,13 +37,15 @@ class mpModules(object):
   #   RAM: the block of internal registers W,Z,B,C,D,E,H,L,SP,PC
   #   TMP: the temporary register
   def A(self):
-    print(self.cpu.reg)
+    print('A')
     yield
 
   def ACT(self):
+    print('ACT')
     yield
 
   def CTRL(self):
+    print('CTRL')
     yield
 
   # Control Unit CU
@@ -100,7 +102,6 @@ class mpModules(object):
       try:
         if(OpCodes.getNextOp() == True):
           # fetch new instruction
-          #print('{:02X}'.format(self.disk.GetByteAt(reg['PC']*c.WORD)))
           instr = OpCodes.parseByte(self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD))
         else:
           # if not, then append operands to our instruction
@@ -119,26 +120,27 @@ class mpModules(object):
 
       # increment Program Counter
       self.cpu.reg['PC'] += 1
-      # fetch phase
-      # T1
-      # deposit PC onto Address Bus
-      # self.addressBus.deposit(self.reg['PC'])
+
       phase(self.cpu.ccycle)()
       self.cpu.runClock()
       yield
 
   def RAM(self):
+    print('RAM')
     yield
 
   def TMP(self):
+    print('TMP')
     yield
 
 
   # CU FUNCTIONS
   # ------------------------------- #
   def fetch(self):
+    # deposit PC onto Address Bus
+    #   destination is memory
+    self.cpu.addressBus.deposit(self.cpu.reg['PC'], c.mCU, c.mMM)
     print('fetch')
-    pass
   def incPC(self):
     print('incPC')
     pass

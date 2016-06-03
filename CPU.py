@@ -88,7 +88,7 @@ class GenericBus(object):
   # deposit data into the bus to transfer around
   def deposit(self, data, src, dst):
     self.bus[:] = 0   # clear bus
-    xf.maskOR_in(self.bus, data, ret=false)
+    xf.maskOR_in(self.bus, data)
     self.src=src
     self.dst=dst
 
@@ -123,9 +123,9 @@ class CPUModel(object):
         'L' : xmpz(0),
       # special registers
         'F' : xmpz(0),  # Flag register
-        'SP': 0,  # Stack Pointer register
-        'IR': 0,  # Instruction Register, stores copy of instruction to be executed
-        'PC': 0   # Program Counter register, holds address of next instruction to be executed
+        'SP': xmpz(0),  # Stack Pointer register
+        'IR': xmpz(0),  # Instruction Register, stores copy of instruction to be executed
+        'PC': xmpz(0)   # Program Counter register, holds address of next instruction to be executed
     }
 
   # start the cpu
@@ -136,10 +136,11 @@ class CPUModel(object):
 
     self.sys.tm.new(self.modules.A())   # A
     self.sys.tm.new(self.modules.ACT()) # ACT
-    self.sys.tm.new(self.modules.CU())  # CU, control unit
     self.sys.tm.new(self.modules.CTRL())# CTRL, control section
     self.sys.tm.new(self.modules.RAM()) # RAM
     self.sys.tm.new(self.modules.TMP()) # TMP
+    self.sys.tm.new(self.modules.CU())  # CU, control unit
+    # note, tasks added last get executed first!
     # --- #
 
   # increment the clock cycles (or states) and the machine cycles.

@@ -1,6 +1,6 @@
 # CONSTANTS
 
-# CPU/MODULES
+# CPU/MODULES/OTHER
 # modules
 mA    = 'MODULE A'
 mACT  = 'MODULE ACT'
@@ -9,6 +9,9 @@ mCTRL = 'MODULE CTRL'
 mFLAGS= 'MODULE FLAGS'
 mRAM  = 'MODULE RAM'
 mTMP  = 'MODULE TMP'
+
+# main memory
+mMM   = 'MAIN MEMORY'
 
 # DISK
 # the word size of the cpu architecture
