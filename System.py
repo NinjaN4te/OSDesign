@@ -12,7 +12,6 @@ import re
 # user libraries/scripts
 import Assembler
 import constants as c
-import COMMAND
 import CPU
 import Disk
 import ProcessLoader

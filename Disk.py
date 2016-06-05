@@ -10,7 +10,6 @@ import numpy as np
 
 # user libraries/scripts
 import constants as c
-import OpCodes
 
 
 # GLOBAL VARIABLES

@@ -15,7 +15,12 @@ import numpy as np
 # ----------------------------------------------------------------------- #
 
 # BOOLEAN MASK OPERATIONS
-# numpy already implements these
+# numpy already implements AND, OR, and XOR
+# bitwise equivalence function, which is the complement of XOR
+#   ie: for x->y, true on x=y and false otherwise
+#       iow: true on (1,1) or (0,0); false on (1,0) or (0,1)
+def bitwise_eqv(b1, b2):
+  return np.invert(np.bitwise_xor(b1, b2))
 
 # bitwise operations
 # shifts and rotations

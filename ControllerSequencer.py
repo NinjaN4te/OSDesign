@@ -1,6 +1,6 @@
-# INSTRUCTION DECODER
+# Controller Sequencer
 # ----------------------------------------------------------------------- #
-# decodes and executes an assembly instruction
+# executes an assembly instruction decoded by the instruction decoder prior
 
 
 # LIBRARIES
@@ -10,6 +10,28 @@ import numpy as np
 # user libraries/modules
 import constants as c
 import BinaryFunctions as bf
+
+
+# CONTROLLER SEQUENCER CLASS
+# ----------------------------------------------------------------------- #
+class ControllerSequencer(object):
+  def __init__(self, cu):
+    # hold a reference to the CU (Control Unit) that created this Decoder module class
+    self.cu = cu
+
+  # COMMANDS
+  # ------------------ #
+  # LOAD COMMANDS
+  # 10. LD D,N
+  # BYTES = ||  0 1 . D D D . 1 1 0   || 8 BIT IMMEDIATE
+  # DESCRIPTION: Load 8-bit immediate into a destination register
+  def LDDN(self, byte):
+    dest = c.DESTINATION[np.array_str(byte[2:5])]
+    if(dest in self.cu.cpu.reg):
+      self.cu.cpu.reg[dest] = byte
+
+  def nothing(self, byte):
+    print('not yet implemented')
 
 # regular integer values are decimal, while hex is appended by H, binary with B
 #   note, all numerical values must start with a number from 0-9! hence, 0FFH
@@ -77,14 +99,6 @@ def updateFlags(flags, res, opr, Z=c.AFFC, N=c.AFFC, H=c.AFFC, C=c.AFFC):
   flags[ c.C ] = C
 
 
-# LOAD COMMANDS
-# 1. LD r1, r2
-#       desc: put value of r2 into r1
-def LD(reg, instr):
-  r1 = instr[ c.ARG1 ]
-  r2 = instr[ c.ARG2 ]
-  if(r1 in reg):
-    reg[r1] = r2
 
 # ARITHMETIC ALU
 # 1. ADD A,n

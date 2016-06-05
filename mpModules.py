@@ -9,9 +9,9 @@
 # ----------------------------------------- #
 
 # user libraries/scripts
-import COMMAND
+import ControllerSequencer
 import constants as c
-import OpCodes
+import Decoder
 
 
 # GLOBAL VARIABLES
@@ -59,6 +59,15 @@ class mpModules(object):
   #   see the W and Z registers. it also knows when a jump was made and behaves accordingly
   # IOW, this is where most of the code is going to be.
   def CU(self):
+    # the actual instruction, hold temporarily here if we have to wait for its operands
+    self.instr = ''
+    # how many operands to wait for before executing this instruction
+    self.operands = 0
+    # controller sequencer module
+    self.ctrlSeq = ControllerSequencer.ControllerSequencer(self)
+    # the decoder module that will decode and interpret instructions
+    #   loaded into IR from memory, which are is binary machine code
+    self.decoder = Decoder.Decoder(self)
     # the execution loop of the cpu has three phases:
     #   fetch, decode execute    --repeat ad nauseum
     #   the cpu execution will be discretely simulated using machine cycles and clock cycles.
@@ -99,21 +108,28 @@ class mpModules(object):
       return d.get(arg, 'ERROR')
     while(self.cpu.reg['PC'] < self.cpu.sys.disk.getNumBytes()):
       try:
-        if(OpCodes.getNextOp() == True):
-          # fetch new instruction
-          instr = OpCodes.parseByte(self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD))
-        else:
+        #if(self.cpu.decoder.getNextOp() == True):
+          # fetch new byte/instruction
+          byte = self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD)
+          # decode new byte/instruction
+          #   result is stored in instr, and register Z and W if it has operands
+          self.decoder.parseByte(byte)
+          # execute new instruction if no more operands to wait for
+          #if(self.operands <= 0):
+          #  self.decoder.executeSeq(opcode, instr)
+        #else:
           # if not, then append operands to our instruction
-          instr.append(OpCodes.parseByte(self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD)))
+        #  instr.append(self.cpu.decoder.parseByte(
+        #              self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD)))
         # check again to see if we can execute in same cycle
-        if(OpCodes.getNextOp() == True):
+        #if(self.cpu.decoder.getNextOp() == True):
           # execute instruction if we have the whole instruction in memory
-          instr = getattr(COMMAND, instr[1])(self.cpu.reg,instr)
+        #  instr = getattr(COMMAND, instr[1])(self.cpu.reg,instr)
       except AttributeError:
         # if failed, then throw error
         print('\n/!\\/!\\/!\\ ERROR /!\\/!\\/!\\')
-        print('Error executing instruction: ' + str(instr[self.cpu.reg['PC']]))
-        print('PC at ' + str(self.cpu.reg['PC']))
+        #print('Error executing instruction: ' + str(instr[self.cpu.reg['PC']]))
+        #print('PC at ' + str(self.cpu.reg['PC']))
         print('')
         raise
 

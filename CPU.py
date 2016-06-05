@@ -12,10 +12,8 @@ import numpy as np
 
 # user libraries/scripts
 import constants as c
-import COMMAND
 import Disk
 import mpModules
-import OpCodes
 
 
 # GLOBAL VARIABLES
@@ -25,7 +23,7 @@ import OpCodes
 # CPU MODEL CLASS
 # ----------------------------------------------------------------------- #
 #
-#           Diagram of CPU layout
+#           Diagram of CPU layout   {{{2
 #                                                                                .--.
 #                                                               8 BITS           |B | .  .
 #       .------------------------------------------------------------------------|U |/'--'\ DATA
@@ -67,7 +65,7 @@ import OpCodes
 #    |'---------------------------------------------------------------------------------'\  ' SIGNALS
 #    '----------------------------------------------------------------------------------./  |
 #                                                                                       '  /
-#
+#}}}2
 
 # a generic bus object
 #   define the size of the bus, most probably will be c.WORD.
@@ -120,6 +118,11 @@ class CPUModel(object):
         'E' : np.zeros(c.WORD, dtype=np.byte),
         'H' : np.zeros(c.WORD, dtype=np.byte),
         'L' : np.zeros(c.WORD, dtype=np.byte),
+      # hidden registers, used by the control unit
+      #   when 'concatenated', together they form one 16-bit address, WZ
+      #   note: W is the higher half, Z is the lower half
+        'W' : np.zeros(c.WORD, dtype=np.byte),
+        'Z' : np.zeros(c.WORD, dtype=np.byte),
       # special registers
         'F' : np.zeros(c.WORD, dtype=np.byte),  # Flag register
         'SP': np.zeros(c.DWORD, dtype=np.byte), # Stack Pointer register
