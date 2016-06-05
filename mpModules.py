@@ -115,8 +115,8 @@ class mpModules(object):
           #   result is stored in instr, and register Z and W if it has operands
           self.decoder.parseByte(byte)
           # execute new instruction if no more operands to wait for
-          #if(self.operands <= 0):
-          #  self.decoder.executeSeq(opcode, instr)
+          if(self.operands <= 0):
+            self.decoder.executeSeq(self.instr, byte)
         #else:
           # if not, then append operands to our instruction
         #  instr.append(self.cpu.decoder.parseByte(

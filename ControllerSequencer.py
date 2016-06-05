@@ -31,7 +31,7 @@ class ControllerSequencer(object):
       self.cu.cpu.reg[dest] = byte
 
   def nothing(self, byte):
-    print('not yet implemented')
+    print('{:} not yet implemented'.format(byte))
 
 # regular integer values are decimal, while hex is appended by H, binary with B
 #   note, all numerical values must start with a number from 0-9! hence, 0FFH

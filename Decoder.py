@@ -8,6 +8,7 @@
 # LIBRARIES
 # ----------------------------------------- #
 import numpy as np
+import re
 
 
 # user libraries/scripts
@@ -30,7 +31,7 @@ class Decoder(object):    #{{{2
     #   the index of the opcode to execute and the byte of data (usually the instruction)
     #   itself to use. Use this table to determine which command to execute within
     #   the class
-    self.opcodeDict = {   # {{{2
+    self.opcodeDict = {   # {{{3
       'NOP'       : self.cu.ctrlSeq.nothing,
       'LD (N),SP' : self.cu.ctrlSeq.nothing,
       'LD R,N'    : self.cu.ctrlSeq.nothing,
@@ -90,16 +91,17 @@ class Decoder(object):    #{{{2
       'BIT N,D': self.cu.ctrlSeq.nothing,
       'RES N,D': self.cu.ctrlSeq.nothing,
       'SET N,D':self.cu.ctrlSeq.nothing
-    }   #}}}2
+    }
+    #}}}3
 
   # parse binary machine code into opcodes and operands
   # ----------------------------------------------------------------------- #
   def parseByte(self, byte):
-    self.cu.instr = c.OPCODENAME[self.optab.lookupOPCODE(byte)]
+    self.cu.instr = self.optab.instrSet[0][c.ISMNEMONIC]
   #}}}2
 
   def executeSeq(self, opcode, byte):
-    self.sequenceDict[opcode](byte)
+    self.opcodeDict[opcode](byte)
 
   # OPCODE TABLE LOOKUP CLASS
   # ----------------------------------------------------------------------- #
@@ -133,142 +135,65 @@ class Decoder(object):    #{{{2
 # create the OpCode Table class
 class OpCodeTable(object):
   def __init__(self):
-    # create the actual OPTAB as an array mask to utilize numpy's vectorization capabilities
-    # OPTAB {{{2
-    self.opcodeTable = np.array ([
-      [ # NOP
-        0 , 0 , 0 , 0 , 0 , 0 , 0 , 0],
-      [ # LD (N), SP
-        0 , 0 , 0 , 0 , 1 , 0 , 0 , 0],
-      [ # LD R,N
-        0 , 0 , R , R , 0 , 0 , 0 , 1],
-      [ # ADD HL,R
-        0 , 0 , R , R , 1 , 0 , 0 , 1],
-      [ # LD (R),A
-        0 , 0 , 0 , R , 0 , 0 , 1 , 0],
-      [ # LD A,(R)
-        0 , 0 , 0 , R , 1 , 0 , 1 , 0],
-      [ # INC R
-        0 , 0 , R , R , 0 , 0 , 1 , 1],
-      [ # DEC R
-        0 , 0 , R , R , 1 , 0 , 1 , 1],
-      [ # INC D
-        0 , 0 , D , D , D , 1 , 0 , 0],
-      [ # DEC D
-        0 , 0 , D , D , D , 1 , 0 , 1],
-      [ # LD D,N
-        0 , 0 , D , D , D , 1 , 1 , 0],
-      [ # RdCA
-        0 , 0 , 0 , 0 , D , 1 , 1 , 1],
-      [ # RdA
-        0 , 0 , 0 , 1 , D , 1 , 1 , 1],
-      [ # STOP
-        0 , 0 , 0 , 1 , 0 , 0 , 0 , 0],
-      [ # JR N
-        0 , 0 , 0 , 1 , 1 , 0 , 0 , 0],
-      [ # JR F,N
-        0 , 0 , 1 , F , F , 0 , 0 , 0],
-      [ # LDI (HL),A
-        0 , 0 , 1 , 0 , 0 , 0 , 1 , 0],
-      [ # LDI A,(HL)
-        0 , 0 , 1 , 0 , 1 , 0 , 1 , 0],
-      [ # LDD (HL),A
-        0 , 0 , 1 , 1 , 0 , 0 , 1 , 0],
-      [ # LDD A,(HL)
-        0 , 0 , 1 , 1 , 1 , 0 , 1 , 0],
-      [ # DAA
-        0 , 0 , 1 , 0 , 0 , 1 , 1 , 1],
-      [ # CPL
-        0 , 0 , 1 , 0 , 1 , 1 , 1 , 1],
-      [ # SCF
-        0 , 0 , 1 , 1 , 0 , 1 , 1 , 1],
-      [ # CCF
-        0 , 0 , 1 , 1 , 1 , 1 , 1 , 1],
-      # ----------------------------- #
-      [ # LD D,D
-        0 , 1 , D , D , D , D , D , D],
-      [ # HALT
-        0 , 1 , 1 , 1 , 0 , 1 , 1 , 0],
-      [ # ALU A,D
-        1 , 0 ,ALU,ALU,ALU, D , D , D],
-      [ # ALU A,N
-        1 , 1 ,ALU,ALU,ALU, 1 , 1 , 0],
-      [ # POP R
-        1 , 1 , R , R , 0 , 0 , 0 , 1],
-      [ # PUSH R
-        1 , 1 , R , R , 0 , 1 , 0 , 1],
-      [ # RST N
-        1 , 1 ,NR3,NR3,NR3, 1 , 1 , 1],
-      # ----------------------------- #
-      [ # RET F
-        1 , 1 , 0 , F , F , 0 , 0 , 0],
-      [ # RET
-        1 , 1 , 0 , 0 , 1 , 0 , 0 , 1],
-      [ # RETI
-        1 , 1 , 0 , 1 , 1 , 0 , 0 , 1],
-      [ # JP F,N
-        1 , 1 , 0 , F , F , 0 , 1 , 0],
-      [ # JP N
-        1 , 1 , 0 , 0 , 0 , 0 , 1 , 1],
-      [ # CALL F,N
-        1 , 1 , 0 , F , F , 1 , 0 , 0],
-      [ # CALL N
-        1 , 1 , 0 , 0 , 1 , 1 , 0 , 1],
-      [ # ADD SP,N
-        1 , 1 , 1 , 0 , 1 , 0 , 0 , 0],
-      [ # LD HL,SP+N
-        1 , 1 , 1 , 1 , 1 , 0 , 0 , 0],
-      [ # LD (FF00+N),A
-        1 , 1 , 1 , 0 , 0 , 0 , 0 , 0],
-      [ # LD A,(FF00+N)
-        1 , 1 , 1 , 1 , 0 , 0 , 0 , 0],
-      [ # LD (C),A
-        1 , 1 , 1 , 0 , 0 , 0 , 1 , 0],
-      [ # LD A,(C)
-        1 , 1 , 1 , 1 , 0 , 0 , 1 , 0],
-      [ # LD (N),A
-        1 , 1 , 1 , 0 , 1 , 0 , 1 , 0],
-      [ # LD A,(N)
-        1 , 1 , 1 , 1 , 1 , 0 , 1 , 0],
-      [ # JP HL
-        1 , 1 , 1 , 0 , 1 , 0 , 0 , 1],
-      [ # LD SP,HL
-        1 , 1 , 1 , 1 , 1 , 0 , 0 , 1],
-      [ # DI
-        1 , 1 , 1 , 1 , 0 , 0 , 1 , 1],
-      [ # EI
-        1 , 1 , 1 , 1 , 1 , 0 , 1 , 1],
-      # ----------------------------- #
-      [ # RdC D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # Rd D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # SdA D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # SWAP D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # SRL D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # BIT N,D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # RES N,D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1],
-      [ # SET N,D
-        1 , 1 , 0 , 0 , 1 , 0 , 1 , 1]
-    ])
-    #}}}2
-  #}}}1
+    # load the instruction set from file
+    # creates the actual OPTAB to use as an array mask to utilize numpy's vectorization capabilities
+    # self.instrset, self.opcodeTable are created and initialized here!
+    self.LoadInstructionSet(c.INSTRUCTIONSETPATH)
   # function within the OpCodeTables object,
   #   accepts an instruction as a parameter that we will then
   #   lookup the opcode for in the table
   def lookupOPCODE(self, instr):
     # first mask opcode table over the instruction
-    mask = np.logical_or(self.opcodeTable == instr, self.opcodeTable  == c.PLACEHOLDERBIT)
+    #mask = np.logical_or(self.opcodeTable == instr, self.opcodeTable  == c.PLACEHOLDERBIT)
     # find the exact match, ie: all 8 bits match
-    match = mask.sum(axis=1)>7
+    #match = mask.sum(axis=1)>7
     # find the index of the match, that is the opcode we return
-    opcode = np.flatnonzero(match)[0]
+    #opcode = np.flatnonzero(match)[0]
     # return the opcode
-    return opcode
+    #return opcode
+    pass
 
+
+  # load the instruction set of the cpu from file
+  def LoadInstructionSet(self, path):
+    # define regex expressions to remove unwanted stuff
+    # strip all comments, all comments begin with a '#' hashtag
+    dcomment = '([\s]+;[\w\W\s]+)$'
+    # open the file
+    with open(c.INSTRUCTIONSETPATH) as f:
+      self.instrSet = [
+        # split each line on white spaces
+        re.split( '\s+', 
+          # remove all comments, comments begin with a '#'
+          re.sub( dcomment, '', line.rstrip('\n')),
+        # don't split the mnemonic string
+        maxsplit=5 )
+      # loop over the file and grab the line if it's not empty, the first line, or a comment line
+      for line in f if not line.startswith(('opcode', ' ', '\n', ';'))  ]
+
+    # now make the opcode mask table
+    # create a new generator function that will return the bits in the string,
+    #   taking into consideration the possible placeholder bits like D, L, S, etc.
+    #   these are defined in the constants.py file
+    def bits():
+      i = 0
+      # iterate over the instruction set and grab the first element, which is the opcode, from
+      #   each line
+      for line in self.instrSet:
+        # opcode is the first element in the line, as can be seen in the InstructionSet file
+        opcode = line[0]
+        # now iterate over each bit in the opcode
+        for bit in opcode:
+          # check if the bit is a placeholder bit and deal with it appropriately
+          try:
+            # 0 or 1
+            yield int(bit)
+          except ValueError:
+            # a placeholder bit, ie: it's a character, eg: D, L, S, etc
+            yield c.PLACEHOLDERBIT
+
+    self.opcodeTable = np.fromiter(bits(), np.uint8)
+    self.opcodeTable.shape = (len(self.instrSet), 8)
+
+    return True
 

@@ -1,0 +1,34 @@
+opcode        operands  MC1   MC2   MC3   mnemonic    ;comments
+
+00DDD110      1I        M1R   MRD   ...   LD D,N      ;load 8 bit immediate into destination register
+10LLLSSS      00        M1R   ...   ...   ALU A,S     ;perform ALU operation with registers A and S, store in A
+ 
+ 
+
+; ------------------------
+; comments
+;
+; opcode:
+;   the opcode is obviously the opcode of the mnemonic
+; operand:
+;   operands specifies how many operands there are and what kind it is:
+;     in general, it has the form XY, where:
+;       X is the number of bytes of the operands, provide 0 for no operands
+;       Y is the type of operand. The types available are as follows:
+;         A: and address
+;         D: a displacement
+;         I: an immediate value
+;         0: no operands 
+; T0:
+;   the number of clock cycles the instruction will take to complete
+; 
+; MC1..MC4
+;   the external operation the instruction performs at the current machine cycle
+;   ... - unused, ie: instruction has completed
+;   M1R - the basic M1 cycle of fetch and decode
+;   MRD - memory read
+;   MWR - memory write
+;   IOR - I/O read
+;   IOW - I/O write
+;   NON - no external operation, only internal computation, so no external effects
+;   INT - interrupt cycle
