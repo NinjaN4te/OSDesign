@@ -152,18 +152,30 @@ class CPUModel(object):
     if(self.clock > self.clockSpeed):
       self.clock -= self.clockSpeed
       self.ccycle += 1
+      print('pc: {:}'.format(np.packbits(self.reg['PC'])[0]))
       if(self.ccycle == 3):
         # flip the bit
         self.controlLines[c.CLK] = (self.controlLines[c.CLK]<1)
       elif(self.ccycle > 4):
         # flip the bit
         self.controlLines[c.CLK] = (self.controlLines[c.CLK]<1)
+        print('M{0:}.{1:}\n'.format(self.ccycle, self.clock))
         self.ccycle -= 4
 
   # reset the machine and clock cycle counters,
   #   call at beginning of every new instruction fetching
   def resetClock(self):
     self.ccycle = 1
+
+  # a convenience function, ask whether or not we have finished
+  #   reading the process from the disk and whether the clock has
+  #   run all its course
+  def pcEnd(self):
+    if(np.packbits(self.reg['PC'])[0] < self.sys.disk.getNumBytes()*c.WORD):
+      return False
+    else:
+      return True
+    
 
   # CONVENIENCE FUNCTIONS
   # ----------------------------------------------------------------------- #

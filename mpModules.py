@@ -55,11 +55,11 @@ class CLK(CoroutineType):
     self.cpu = cpu
   def run(self):
     while(True):
-      print(' {0:}.{1:}'.format(self.cpu.ccycle, self.cpu.clock))
-      print('pc: {:}'.format(np.packbits(self.cpu.reg['PC'])[0]))
+      #print(' {0:}.{1:}'.format(self.cpu.ccycle, self.cpu.clock))
+      #print('pc: {:}'.format(np.packbits(self.cpu.reg['PC'])[0]))
       # run the clock to sync all other tasks
       self.cpu.runClock()
-      if(np.packbits(self.cpu.reg['PC'])[0] >= self.cpu.sys.disk.getNumBytes()):
+      if(self.cpu.pcEnd() == True):
         break
       else:
         yield
@@ -121,74 +121,97 @@ class CU(CoroutineType):
     #       if an instruction needs more than 4 clock cycles or states or 1 machine cycle
     #         to execute, t4 of m1 will transition directly into t1 of m2
     # create dictionary of what to do on which states/clock cycles
-    def operation(arg):
-      d = {
-        '...' :self.M1R,    # do M1R if no operands are next
-        'M1R' :self.M1R,    # machine cycle 1 fetch and decode
-        'RD'  :self.RD      # read from memory
-      }
-      return d.get(arg, 'ERROR') 
+  def operation(self, arg):
+    d = {
+      '...' :self.wait,   # do nothing if next is '...'
+      'M1R' :self.M1R,    # machine cycle 1 fetch and decode
+      'RD'  :self.RD      # read from memory
+    }
+    return d.get(arg, 'ERROR') 
   # the run function used by the task manager
   def run(self):
     while(True):
-      #self.cpu.reg['PC'] = bf.add(self.cpu.reg['PC'], 1)
-      self.get_task().new( self.M1R())
-      # setting to >1 allows T2 of the machine cycle to increment the PC!
+      self.get_task().new(self.operation(self.nextOp)())
+      # setting to <4 allows T2 of the machine cycle to increment the PC!
+      # suspend the run until we are at the beginning of each clock cycle
       while(self.cpu.clock < 4):
-        if(np.packbits(self.cpu.reg['PC'])[0] >= self.cpu.sys.disk.getNumBytes()):
+        if(self.cpu.pcEnd() == True):
           break
         yield
-      if(np.packbits(self.cpu.reg['PC'])[0] >= self.cpu.sys.disk.getNumBytes()):
+      if(self.cpu.pcEnd() == True):
         break
       yield
 
   # CU EXTERNAL OPERATIONS
   # ------------------------------- #
   def M1R(self):
+    print('                               m1r')
     # the basic Machine Cycle 1 run of fetching the next byte of data
     # what to do at each clock phase
     if(self.cpu.ccycle==1):
       # deposit PC onto address bus, PC OUT STATUS
       self.cpu.addressBus.deposit(self.cpu.reg['PC'])
+      print('ADDRESSBUS: {:}'.format(self.cpu.addressBus.read()))
       # /RD goes low (active)
       self.cpu.controlLines[c.RD] = c.LO
     elif(self.cpu.ccycle==2):
       # increment Program Counter
-      self.cpu.reg['PC'] = bf.add(self.cpu.reg['PC'], 1)
+      self.cpu.reg['PC'] = bf.add(self.cpu.reg['PC'], c.WORD)
       # memory uses one clock cycle to decode address and make contents available
     elif(self.cpu.ccycle==3):
-      # transfer byte of data from memory to IR
-      self.cpu.reg['IR'] = self.cpu.dataBus.read()
+      # wait a little for memory to transfer on data bus first
       yield
+      # transfer byte of data from memory to IR
+      self.cpu.reg['IR'] = np.copy(self.cpu.dataBus.read())
+      print('IR: {:}'.format(self.cpu.reg['IR']))
       # set /RD back to hi (inactive)
       self.cpu.controlLines[c.RD] = c.HI
     elif(self.cpu.ccycle==4):
       # decode new instruction in IR, and execute if possible
-      # result is stored in instr
-      self.decoder.parseByte(self.cpu.reg['IR'])
+      #   result is stored in instr
+      self.decoder.parseByte(self.cpu.reg['IR'], self.nextOp)
+      print('INSTR: {:}'.format(self.instr))
       # execute new instruction if no more operands to wait for
       #  self.decoder.executeSeq(self.instr, byte)
 
   def RD(self):
+    print('                               rd')
     # read from memory
     if(self.cpu.ccycle==1):
       # deposit PC onto address bus, PC OUT STATUS
       self.cpu.addressBus.deposit(self.cpu.reg['PC'])
+      print('ADDRESSBUS: {:}'.format(self.cpu.addressBus.read()))
       # /RD goes low (active)
       self.cpu.controlLines[c.RD] = c.LO
     elif(self.cpu.ccycle==2):
       # increment Program Counter
-      bf.add(self.cpu.reg['PC'], np.array([0,0,0,0,0,0,0,1], dtype=np.uint8))
+      self.cpu.reg['PC'] = bf.add(self.cpu.reg['PC'], c.WORD)
       # memory uses one clock cycle to decode address and make contents available
     elif(self.cpu.ccycle==3):
-      # transfer byte of data from memory to destination register
-      self.cpu.reg[self.mux] = self.cpu.dataBus.read()
+      # wait a little for memory to transfer on data bus first
       yield
+      # transfer byte of data from memory to destination register
+      # decode the data on the bus
+      data = self.decoder.parseByte(self.cpu.dataBus.read(), self.nextOp)
+      # then store in appropriate register, as gated by the MUX
+      self.cpu.reg[self.mux()] = np.copy(data)
+      print('DATABUS: {:}'.format(data))
+      print('MUX: {:}'.format(self.mux()))
       # set /RD back to hi (inactive)
       self.cpu.controlLines[c.RD] = c.HI
+      print('reg[{0:}] loaded with: {1:}'.format(self.mux(), self.cpu.reg[self.mux()]))
     elif(self.cpu.ccycle==4):
+      print('PASS 4')
       # nothing
       pass
+    
+  # make sure that this is called if there are empty clock cycles left
+  def wait(self):
+    self.nextOp = 'M1R'
+    pass
+    # this yield will not be reached
+    yield
+      
 
   # the multiplexer MUX that selects the destination register
   def mux(self):

@@ -27,6 +27,10 @@ class Decoder(object):    #{{{2
     self.cu = cu
     # create the opcode table object for the decoder
     self.optab = OpCodeTable()
+    # current machine cycle, reset to c.INSTRSETMC2 if read a '...'
+    self.currentMC = c.INSTRSETMC2
+    # keep a copy of the match index so we don't have to keep finding it again
+    self.matchIn = 0
     # the Controller Sequencer class will receive from the instruction Decoder class
     #   the index of the opcode to execute and the byte of data (usually the instruction)
     #   itself to use. Use this table to determine which command to execute within
@@ -34,14 +38,37 @@ class Decoder(object):    #{{{2
 
   # parse binary machine code into opcodes and operands
   # ----------------------------------------------------------------------- #
-  def parseByte(self, byte):
-    #self.cu.instr = self.optab.instrSet[0][c.INSTRSETMNEMONIC]
-    self.cu.instr = byte
-    self.cu.nextOp = self.optab.instrSet[0][c.INSTRSETMC2]
+  def parseByte(self, byte, nextOp):
+    print('------------------------------{:}'.format(nextOp))
+    # M1R machine cycle 1 fetch
+    if(nextOp == '...' or nextOp == 'M1R'):
+      # store the current instruction in the variable we created in the CU class
+      self.cu.instr = np.copy(byte)
+      # find the index of the match
+      self.matchIn = self.optab.lookupOPCODE(byte)
+      # set the next operation, nextOp
+      # reset machine cycle if next is blank
+      self.cu.nextOp = self.optab.instrSet[self.matchIn][self.currentMC]
+      if(self.cu.nextOp == '...'):
+        self.currentMC = c.INSTRSETMC2
+      else:
+        # point to next machine cycle operation at next parse
+        self.currentMC += 1
+    # /RD memory read operation
+    elif(nextOp == 'RD'):
+      # set the next operation, nextOp
+      # reset machine cycle if next is blank
+      self.cu.nextOp = self.optab.instrSet[self.matchIn][self.currentMC]
+      if(self.cu.nextOp == '...'):
+        self.currentMC = c.INSTRSETMC2
+        if(self.cu.cpu.ccycle == 4):
+          self.cu.nextOp = 'M1R'
+      else:
+        # point to next machine cycle operation at next parse
+        self.currentMC += 1
+      return byte
+      
   #}}}2
-
-  def executeSeq(self, opcode, byte):
-    self.opcodeDict[opcode](byte)
 
   # OPCODE TABLE LOOKUP CLASS
   # ----------------------------------------------------------------------- #
@@ -84,14 +111,18 @@ class OpCodeTable(object):
   #   lookup the opcode for in the table
   def lookupOPCODE(self, instr):
     # first mask opcode table over the instruction
-    #mask = np.logical_or(self.opcodeTable == instr, self.opcodeTable  == c.PLACEHOLDERBIT)
+    mask = np.logical_or(self.opcodeTable == instr, self.opcodeTable  == c.PLACEHOLDERBIT)
+    print(self.opcodeTable)
+    print(instr)
+    print(mask)
     # find the exact match, ie: all 8 bits match
-    #match = mask.sum(axis=1)>7
+    match = mask.sum(axis=1)>7
+    print(match)
     # find the index of the match, that is the opcode we return
-    #opcode = np.flatnonzero(match)[0]
+    opcode = np.flatnonzero(match)[0]
+    print(opcode)
     # return the opcode
-    #return opcode
-    pass
+    return opcode
 
 
   # load the instruction set of the cpu from file
@@ -132,7 +163,8 @@ class OpCodeTable(object):
             # a placeholder bit, ie: it's a character, eg: D, L, S, etc
             yield c.PLACEHOLDERBIT
 
-    self.opcodeTable = np.fromiter(bits(), np.uint8)
+    # important to have the dtype as np.byte, so it is signed
+    self.opcodeTable = np.fromiter(bits(), np.byte)
     self.opcodeTable.shape = (len(self.instrSet), 8)
 
     return True

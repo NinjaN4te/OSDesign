@@ -65,12 +65,14 @@ class Disk(object):
 
   # the run loop of the disk in the program
   def run(self):
-    while(np.packbits(self.sys.cpu.reg['PC'])[0] < self.getNumBytes()):
-      def phase(p):
-        if(p==3 and self.sys.cpu.controlLines[c.RD] == c.LO):
-          # if on clock cycle 3 and phase is 3, deposit byte of data at address on
-          #   data bus
-          self.sys.cpu.dataBus.deposit(self.GetByteAt(self.sys.cpu.addressBus.read()))
+    def phase(p):
+      if(p==3 and self.sys.cpu.controlLines[c.RD] == c.LO):
+        # if on clock cycle 3 and phase is 3, deposit byte of data at address on
+        #   data bus
+        self.sys.cpu.dataBus.deposit(self.GetByteAt(self.sys.cpu.addressBus.read()))
+    while(True):
       phase(self.sys.cpu.ccycle)
+      if(self.sys.cpu.pcEnd() == True):
+        break
       yield
 
