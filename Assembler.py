@@ -72,7 +72,7 @@ class Assembler(object):
     # ASSEMBLE
     # -------------------------- #
     # length of the program, obtain during first pass of assembler
-    programlength = 7
+    programlength = 100
     # position of current index
     pos = 0
     # store assembled bytes in this numpy array, this is also the output
@@ -95,7 +95,7 @@ class Assembler(object):
         assembledCode[pos:pos+opcode.size] = opcode
         pos += opcode.size
     # save the numpy array containing the assembled code to the file
-    np.save(programsPath + filename, assembledCode)
+    np.save(programsPath + filename, assembledCode[0:pos])
 
 
 

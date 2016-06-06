@@ -39,7 +39,6 @@ class Decoder(object):    #{{{2
   # parse binary machine code into opcodes and operands
   # ----------------------------------------------------------------------- #
   def parseByte(self, byte, nextOp):
-    print('------------------------------{:}'.format(nextOp))
     # M1R machine cycle 1 fetch
     if(nextOp == '...' or nextOp == 'M1R'):
       # store the current instruction in the variable we created in the CU class
@@ -112,15 +111,10 @@ class OpCodeTable(object):
   def lookupOPCODE(self, instr):
     # first mask opcode table over the instruction
     mask = np.logical_or(self.opcodeTable == instr, self.opcodeTable  == c.PLACEHOLDERBIT)
-    print(self.opcodeTable)
-    print(instr)
-    print(mask)
     # find the exact match, ie: all 8 bits match
     match = mask.sum(axis=1)>7
-    print(match)
     # find the index of the match, that is the opcode we return
     opcode = np.flatnonzero(match)[0]
-    print(opcode)
     # return the opcode
     return opcode
 

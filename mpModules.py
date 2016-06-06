@@ -55,8 +55,6 @@ class CLK(CoroutineType):
     self.cpu = cpu
   def run(self):
     while(True):
-      #print(' {0:}.{1:}'.format(self.cpu.ccycle, self.cpu.clock))
-      #print('pc: {:}'.format(np.packbits(self.cpu.reg['PC'])[0]))
       # run the clock to sync all other tasks
       self.cpu.runClock()
       if(self.cpu.pcEnd() == True):
@@ -145,13 +143,11 @@ class CU(CoroutineType):
   # CU EXTERNAL OPERATIONS
   # ------------------------------- #
   def M1R(self):
-    print('                               m1r')
     # the basic Machine Cycle 1 run of fetching the next byte of data
     # what to do at each clock phase
     if(self.cpu.ccycle==1):
       # deposit PC onto address bus, PC OUT STATUS
       self.cpu.addressBus.deposit(self.cpu.reg['PC'])
-      print('ADDRESSBUS: {:}'.format(self.cpu.addressBus.read()))
       # /RD goes low (active)
       self.cpu.controlLines[c.RD] = c.LO
     elif(self.cpu.ccycle==2):
@@ -163,24 +159,20 @@ class CU(CoroutineType):
       yield
       # transfer byte of data from memory to IR
       self.cpu.reg['IR'] = np.copy(self.cpu.dataBus.read())
-      print('IR: {:}'.format(self.cpu.reg['IR']))
       # set /RD back to hi (inactive)
       self.cpu.controlLines[c.RD] = c.HI
     elif(self.cpu.ccycle==4):
       # decode new instruction in IR, and execute if possible
       #   result is stored in instr
       self.decoder.parseByte(self.cpu.reg['IR'], self.nextOp)
-      print('INSTR: {:}'.format(self.instr))
       # execute new instruction if no more operands to wait for
       #  self.decoder.executeSeq(self.instr, byte)
 
   def RD(self):
-    print('                               rd')
     # read from memory
     if(self.cpu.ccycle==1):
       # deposit PC onto address bus, PC OUT STATUS
       self.cpu.addressBus.deposit(self.cpu.reg['PC'])
-      print('ADDRESSBUS: {:}'.format(self.cpu.addressBus.read()))
       # /RD goes low (active)
       self.cpu.controlLines[c.RD] = c.LO
     elif(self.cpu.ccycle==2):
@@ -195,13 +187,9 @@ class CU(CoroutineType):
       data = self.decoder.parseByte(self.cpu.dataBus.read(), self.nextOp)
       # then store in appropriate register, as gated by the MUX
       self.cpu.reg[self.mux()] = np.copy(data)
-      print('DATABUS: {:}'.format(data))
-      print('MUX: {:}'.format(self.mux()))
       # set /RD back to hi (inactive)
       self.cpu.controlLines[c.RD] = c.HI
-      print('reg[{0:}] loaded with: {1:}'.format(self.mux(), self.cpu.reg[self.mux()]))
     elif(self.cpu.ccycle==4):
-      print('PASS 4')
       # nothing
       pass
     
