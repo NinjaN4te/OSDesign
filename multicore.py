@@ -9,7 +9,12 @@ from abc import ABCMeta
 # define some random constants for use in code
 NUMPROCESSORS = 8
 FILEPATH = './DataFile7.txt'
-TIMEQ = 1
+TIMEQ = 10
+INCOMPLETE = 0
+COMPLETE = 1
+GOOD = 2
+INTERRUPT = 3
+QUIT = 4
 
 # library stuff {{{2
 class CoroutineType(metaclass=ABCMeta):
@@ -39,7 +44,6 @@ class Task(object):
     self.tm       = tm            # reference to task manager of this task
     self.children = deque()       # tid's of tasks spawned off of this task
   def run(self):
-    #print('running pid {:}'.format(self.tid))
     return self.target.send(self.sendval)
   def new(self, target):
     # add new child task, if this parent task dies, all the children go with it
@@ -109,15 +113,23 @@ class Clock(CoroutineType):
   def __init__(self, sys):
     self.sys = sys
     self.time = 0
+    self.cntr = 0
   def advanceTime(self):
-    self.time += TIMEQ
+    self.time += 1
+    self.cntr += 1
+    if(self.cntr > TIMEQ):
+      self.cntr -= TIMEQ
+      self.sys.generateInterrupt()
+    if(self.time > 10000):
+      self.sys.generateQUIT()
   def getT(self):
     return self.time
   def run(self):
     while(True):
       self.advanceTime()
-      print(self.time)
-      yield
+      status = yield from sys.getSysStatus()
+      if status == QUIT:
+        break
 
 # multicore chip class
 #   the workhorse that splits the load
@@ -126,23 +138,52 @@ class MultiCoreProcessor(CoroutineType):
     self.sys = sys
     # list of processors in this multicore setup
     self.processors = [Processor(self, i) for i in range(0, NUMPROCESSORS)]
+    self.pload = np.zeros(NUMPROCESSORS)
+    self.queue = deque()
+  def admitNewProcess(self, process):
+    p = np.argmin(self.pload, axis=0)
+    self.processors[p].admitNewProcess(process)
+  def start(self):
+    for p in self.processors:
+      self.get_task().new(p)
+    
   def run(self):
     while(True):
-      yield
+      if(len(self.queue) >0):
+        newp = self.queue.pop()
+        self.admitNewProcess(newp)
+      status = yield from sys.getSysStatus()
+      if status == QUIT:
+        break
 
 # the processor class
 class Processor(CoroutineType):
-  def __init__(self, mcp, id):
+  def __init__(self, mcp, prcrid):
     # id of the processor
     self.mcp = mcp
-    self.id = id
+    self.prcrid = prcrid
     self.jobslist = deque()
+    self.load = 0
+  def getLoad(self):
+    return self.load
+  def admitNewProcess(self, process):
+    self.jobslist.append(process)
+    self.load += process.totalPTime
   def run(self):
     while(True):
-      yield
+      # update load
+      self.mcp.pload[self.prcrid] = self.getLoad()
+      if(len(self.jobslist)>0):
+        self.jobslist[0].run()
+      status = yield from sys.getSysStatus()
+      if status == INTERRUPT:
+        if(len(self.jobslist)>0):
+          self.jobslist.append(self.jobslist.popleft())
+      elif status == QUIT:
+        break
 
 # the process class
-class Process(CoroutineType):
+class Process():
   def __init__(self, pid, arrivalt, instr):
     self.pid = pid
     self.arrivalt = arrivalt
@@ -152,7 +193,13 @@ class Process(CoroutineType):
     self.totalWTime = np.sum(instr[1::2], axis=0)
     self.index = 0
   def run(self):
-    self.instr[index] -= TIMEQ
+    try:
+      self.instr[self.index] -= TIMEQ
+      if(self.instr[self.index]<0):
+        self.index+=1
+        self.instr[self.index] += self.instr[self.index-1]
+    except IndexError:
+      return COMPLETE
 
 # contains the list of processes to process through
 class Jobs(CoroutineType):
@@ -166,15 +213,20 @@ class Jobs(CoroutineType):
         line = re.sub('[\s\n,]+$', '', line)
         # split by commas and whitespace
         line = re.split('[\s,]+', line)
-        self.jobslist.append(Process(line[0], line[1], np.fromiter((int(t) for t in line[2:]), dtype=np.int16)))
+        self.jobslist.append(Process(int(line[0]), int(line[1]), np.fromiter((int(t) for t in line[2:]), dtype=np.int16)))
     f.close()
   def run(self):
     while(True):
-      if(self.jobslist[0].arrivalt <= self.sys.clock.getT()):
-        newjob = self.jobslist.popleft()
-        self.sys.mcp.newProcess(newjob)
-        print('admitted new job @ {:}'.format(self.sys.clockgetT()))
-      yield
+      try:
+        if(self.jobslist[0].arrivalt <= self.sys.clock.getT()):
+          newjob = self.jobslist.popleft()
+          self.sys.mcp.queue.append(newjob)
+          print('admitted new job @ {:}'.format(self.sys.clock.getT()))
+        status = yield from sys.getSysStatus()
+        if status == QUIT:
+          break
+      except IndexError:
+        break
 
 class System():
   def __init__(self):
@@ -183,12 +235,23 @@ class System():
     self.mcp = MultiCoreProcessor(self)
     self.tm = TaskManager()
     self.jobs.loadProcessesFromFile(FILEPATH)
+    self.status = GOOD
   def start(self):
     # start all tasks
     self.tm.new(self.mcp)
+    self.mcp.start()
     self.tm.new(self.jobs)
     self.tm.new(self.clock)
     self.tm.mainloop()
+  def generateInterrupt(self):
+    self.status = INTERRUPT
+  def generateQUIT(self):
+    self.status = QUIT
+  def getSysStatus(self):
+    subStatus = yield
+    if subStatus == None:
+      return self.status
+    
 
 sys = System()
 sys.start()
