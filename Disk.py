@@ -20,7 +20,7 @@ import constants as c
 class Disk(object):
   def __init__(self, system):
     # this member will contain the entirety of the physical addresses of the disk memory
-    self.diskMem = np.zeros(c.DISKSIZE, dtype=np.byte)
+    self.diskMem = np.zeros(c.DISKSIZE, dtype=np.uint8)
     # index to the next free actual physical address of diskMem
     #   for purposes of the simulation, currently only increments, ie: only sequentially storing
     self.index = 0
@@ -56,6 +56,7 @@ class Disk(object):
 
   def GetByteAt(self, index):
     # return a byte sized view displaced by index
+    index = np.packbits(index)[0]
     return self.diskMem[index:index+c.WORD]
 
   def start(self):
@@ -64,5 +65,12 @@ class Disk(object):
 
   # the run loop of the disk in the program
   def run(self):
-    yield
+    while(np.packbits(self.sys.cpu.reg['PC'])[0] < self.getNumBytes()):
+      def phase(p):
+        if(p==3 and self.sys.cpu.controlLines[c.RD] == c.LO):
+          # if on clock cycle 3 and phase is 3, deposit byte of data at address on
+          #   data bus
+          self.sys.cpu.dataBus.deposit(self.GetByteAt(self.sys.cpu.addressBus.read()))
+      phase(self.sys.cpu.ccycle)
+      yield
 

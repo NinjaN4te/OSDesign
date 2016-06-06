@@ -7,10 +7,13 @@
 
 # LIBRARIES
 # ----------------------------------------- #
+import numpy as np
 
 # user libraries/scripts
+import BinaryFunctions as bf
 import ControllerSequencer
 import constants as c
+from CoroutineType import CoroutineType
 import Decoder
 
 
@@ -20,10 +23,10 @@ import Decoder
 # MPMODULES CLASS
 # ----------------------------------------------------------------------- #
 # class that contains all the implementations for the different mp modules
-class mpModules(object):
-  def __init__(self, cpu):
+#class mpModules(object):
+#  def __init__(self, cpu):
     # hold a reference to the cpu object this mpModules belongs to
-    self.cpu = cpu
+#    self.cpu = cpu
 
   # MICROPROCESSOR MODULES
   # ------------------------------- #
@@ -31,22 +34,40 @@ class mpModules(object):
   # list:
   #   A: the accumulator register
   #   ACT: the temporary accumulator/buffer register before entering the ALU unit
+  #   CLK: keeps the clock running
   #   CU: the CU, control unit, of the microprocessor that coordinates everything in the MPU
   #   CTRL: control section of microprocessor, includes the IR, decoder, and controller sequencer
   #   FLAGS: the flags or 'F' register
   #   RAM: the block of internal registers W,Z,B,C,D,E,H,L,SP,PC
   #   TMP: the temporary register
-  def A(self):
-    print('A')
-    yield
+class A():
+  def __init__(self):
+    pass
+  #yield
 
-  def ACT(self):
-    print('ACT')
-    yield
+class ACT():
+  def __init__(self):
+    pass
+  #yield
 
-  def CTRL(self):
-    print('CTRL')
-    yield
+class CLK(CoroutineType):
+  def __init__(self, cpu):
+    self.cpu = cpu
+  def run(self):
+    while(True):
+      print(' {0:}.{1:}'.format(self.cpu.ccycle, self.cpu.clock))
+      print('pc: {:}'.format(np.packbits(self.cpu.reg['PC'])[0]))
+      # run the clock to sync all other tasks
+      self.cpu.runClock()
+      if(np.packbits(self.cpu.reg['PC'])[0] >= self.cpu.sys.disk.getNumBytes()):
+        break
+      else:
+        yield
+
+class CTRL():
+  def __init__(self):
+    pass
+  #yield
 
   # Control Unit CU
   #   the CU coordinates everything within the microprocessor. it synchronizes/sequences
@@ -58,111 +79,130 @@ class mpModules(object):
   #   ADD r example in the reference, ie: whether overlap is possible. Only the CU can
   #   see the W and Z registers. it also knows when a jump was made and behaves accordingly
   # IOW, this is where most of the code is going to be.
-  def CU(self):
+class CU(CoroutineType):
+  def __init__(self, cpu):
+    # hold a reference to the cpu object that created this object
+    self.cpu = cpu
     # the actual instruction, hold temporarily here if we have to wait for its operands
     self.instr = ''
-    # how many operands to wait for before executing this instruction
-    self.operands = 0
     # controller sequencer module
     self.ctrlSeq = ControllerSequencer.ControllerSequencer(self)
     # the decoder module that will decode and interpret instructions
     #   loaded into IR from memory, which are is binary machine code
     self.decoder = Decoder.Decoder(self)
+    # the next external operation to perform: M1R, RD, MWR, etc
+    self.nextOp = 'M1R'
     # the execution loop of the cpu has three phases:
     #   fetch, decode execute    --repeat ad nauseum
     #   the cpu execution will be discretely simulated using machine cycles and clock cycles.
     #   the clock cycles will also sometimes be referred to as 'states' here.
-    #   one machine cycle = four clock cycles/states, notated M1,M2,... and T1,T2,... respectively
+    #   one machine cycle = four clock cycles/states, notated m1,m2,... and t1,t2,... respectively
     #   so now to elaborate on each phase:
-    #   FETCH:
-    #     T1)
-    #       address in PC is deposited onto the Address Bus to be transferred to MM. MM will then
-    #         read the address on the Address Bus and decode it into some actual address of a
+    #   fetch:
+    #     t1)
+    #       address in pc is deposited onto the address bus to be transferred to mm. mm will then
+    #         read the address on the address bus and decode it into some actual address of a
     #         memory location.
-    #     T2)
-    #       PC is incremented (PC=PC+1) which memory is reading (ie, while MM decodes and accesses
-    #         the memory location at the address). At the end of T2, the contents
+    #     t2)
+    #       pc is incremented (pc=pc+1) which memory is reading (ie, while mm decodes and accesses
+    #         the memory location at the address). at the end of t2, the contents
     #         of the memory location specified by the provided address will be available to
-    #         be transferred into the MPU (microprocessing unit).
-    #     T3)
+    #         be transferred into the mpu (microprocessing unit).
+    #     t3)
     #       the instruction contained at the specified memory location is deposited onto the
-    #         data bus and is transferred into the IR (instruction register) of the MPU.
-    #   DECODE & EXECUTE:
-    #     T4)
-    #       the instruction that was transferred into the IR at the end of T3 is now
-    #         decoded and executed. This takes at least one machine state (T4), but
+    #         data bus and is transferred into the ir (instruction register) of the mpu.
+    #   decode & execute:
+    #     t4)
+    #       the instruction that was transferred into the ir at the end of t3 is now
+    #         decoded and executed. this takes at least one machine state (t4), but
     #         possibly more, and hence the varying number of cycles to execute a
     #         given instruction.
-    #    *T5)
+    #    *t5)
     #       if an instruction needs more than 4 clock cycles or states or 1 machine cycle
-    #         to execute, T4 of M1 will transition directly into T1 of M2
+    #         to execute, t4 of m1 will transition directly into t1 of m2
     # create dictionary of what to do on which states/clock cycles
-    def phase(arg):
+    def operation(arg):
       d = {
-      # M1
-        1:self.fetch,       # fetch instruction at address in PC
-        2:self.incPC,       # increment PC
-        3:self.mvINSTRtoIR, # move instruction in memory location in memory to PC
-        4:self.decexec      # decode and execute function
+        '...' :self.M1R,    # do M1R if no operands are next
+        'M1R' :self.M1R,    # machine cycle 1 fetch and decode
+        'RD'  :self.RD      # read from memory
       }
-      return d.get(arg, 'ERROR')
-    while(self.cpu.reg['PC'] < self.cpu.sys.disk.getNumBytes()):
-      try:
-        #if(self.cpu.decoder.getNextOp() == True):
-          # fetch new byte/instruction
-          byte = self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD)
-          # decode new byte/instruction
-          #   result is stored in instr, and register Z and W if it has operands
-          self.decoder.parseByte(byte)
-          # execute new instruction if no more operands to wait for
-          if(self.operands <= 0):
-            self.decoder.executeSeq(self.instr, byte)
-        #else:
-          # if not, then append operands to our instruction
-        #  instr.append(self.cpu.decoder.parseByte(
-        #              self.cpu.sys.disk.GetByteAt(self.cpu.reg['PC']*c.WORD)))
-        # check again to see if we can execute in same cycle
-        #if(self.cpu.decoder.getNextOp() == True):
-          # execute instruction if we have the whole instruction in memory
-        #  instr = getattr(COMMAND, instr[1])(self.cpu.reg,instr)
-      except AttributeError:
-        # if failed, then throw error
-        print('\n/!\\/!\\/!\\ ERROR /!\\/!\\/!\\')
-        #print('Error executing instruction: ' + str(instr[self.cpu.reg['PC']]))
-        #print('PC at ' + str(self.cpu.reg['PC']))
-        print('')
-        raise
-
-      # increment Program Counter
-      self.cpu.reg['PC'] += 1
-
-      phase(self.cpu.ccycle)()
-      self.cpu.runClock()
+      return d.get(arg, 'ERROR') 
+  # the run function used by the task manager
+  def run(self):
+    while(True):
+      #self.cpu.reg['PC'] = bf.add(self.cpu.reg['PC'], 1)
+      self.get_task().new( self.M1R())
+      # setting to >1 allows T2 of the machine cycle to increment the PC!
+      while(self.cpu.clock < 4):
+        if(np.packbits(self.cpu.reg['PC'])[0] >= self.cpu.sys.disk.getNumBytes()):
+          break
+        yield
+      if(np.packbits(self.cpu.reg['PC'])[0] >= self.cpu.sys.disk.getNumBytes()):
+        break
       yield
 
-  def RAM(self):
-    print('RAM')
-    yield
-
-  def TMP(self):
-    print('TMP')
-    yield
-
-
-  # CU FUNCTIONS
+  # CU EXTERNAL OPERATIONS
   # ------------------------------- #
-  def fetch(self):
-    # deposit PC onto Address Bus
-    #   destination is memory
-    #self.cpu.addressBus.deposit(self.cpu.reg['PC'], c.mCU, c.mMM)
-    print('fetch')
-  def incPC(self):
-    print('incPC')
+  def M1R(self):
+    # the basic Machine Cycle 1 run of fetching the next byte of data
+    # what to do at each clock phase
+    if(self.cpu.ccycle==1):
+      # deposit PC onto address bus, PC OUT STATUS
+      self.cpu.addressBus.deposit(self.cpu.reg['PC'])
+      # /RD goes low (active)
+      self.cpu.controlLines[c.RD] = c.LO
+    elif(self.cpu.ccycle==2):
+      # increment Program Counter
+      self.cpu.reg['PC'] = bf.add(self.cpu.reg['PC'], 1)
+      # memory uses one clock cycle to decode address and make contents available
+    elif(self.cpu.ccycle==3):
+      # transfer byte of data from memory to IR
+      self.cpu.reg['IR'] = self.cpu.dataBus.read()
+      yield
+      # set /RD back to hi (inactive)
+      self.cpu.controlLines[c.RD] = c.HI
+    elif(self.cpu.ccycle==4):
+      # decode new instruction in IR, and execute if possible
+      # result is stored in instr
+      self.decoder.parseByte(self.cpu.reg['IR'])
+      # execute new instruction if no more operands to wait for
+      #  self.decoder.executeSeq(self.instr, byte)
+
+  def RD(self):
+    # read from memory
+    if(self.cpu.ccycle==1):
+      # deposit PC onto address bus, PC OUT STATUS
+      self.cpu.addressBus.deposit(self.cpu.reg['PC'])
+      # /RD goes low (active)
+      self.cpu.controlLines[c.RD] = c.LO
+    elif(self.cpu.ccycle==2):
+      # increment Program Counter
+      bf.add(self.cpu.reg['PC'], np.array([0,0,0,0,0,0,0,1], dtype=np.uint8))
+      # memory uses one clock cycle to decode address and make contents available
+    elif(self.cpu.ccycle==3):
+      # transfer byte of data from memory to destination register
+      self.cpu.reg[self.mux] = self.cpu.dataBus.read()
+      yield
+      # set /RD back to hi (inactive)
+      self.cpu.controlLines[c.RD] = c.HI
+    elif(self.cpu.ccycle==4):
+      # nothing
+      pass
+
+  # the multiplexer MUX that selects the destination register
+  def mux(self):
+    return c.DESTINATION[np.array_str(self.instr[2:5])]
+
+class RAM():
+  def __init__(self):
     pass
-  def mvINSTRtoIR(self):
-    print('mvINSTRtoIR')
+  #yield
+
+class TMP():
+  def __init__(self):
     pass
-  def decexec(self):
-    print('decexec')
-    pass
+  #yield
+
+
 

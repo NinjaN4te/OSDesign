@@ -13,7 +13,7 @@ import numpy as np
 # user libraries/scripts
 import constants as c
 import Disk
-import mpModules
+from mpModules import CLK, CU
 
 
 # GLOBAL VARIABLES
@@ -75,19 +75,12 @@ class GenericBus(object):
     # size of the bus
     self.size = size
     # the bus will hold data to be transferred between modules
-    self.bus = np.zeros(size, dtype=np.byte)
-    # source and destination modules, use with constants in the constants.py file
-    self.src = ''
-    self.dst = ''
-    # if bus is being used, it is busy and cannot be used by some other module
-    self.busy = False
+    self.data = np.zeros(size, dtype=np.uint8)
 
   # deposit data into the bus to transfer around
-  def deposit(self, data, src, dst):
-    self.bus.fill(0)   # clear bus
-    self.bus[0:data.size] = data
-    self.src=src
-    self.dst=dst
+  def deposit(self, data):
+    self.data.fill(0)   # clear bus
+    self.data[0:data.size] = data
 
   # read data in the bus; return the data
   def read(self):
@@ -95,42 +88,44 @@ class GenericBus(object):
 
 class CPUModel(object):
   def __init__(self, system):
-    # clock cycles, also called states
+    # current clock cycle. increase machine cycle by 1 every 4 clock cycles
+    #   ie: machine cycle switches high/low every 2 clock cycles
     self.ccycle = 1
-    # machine cycles, 4 clock cycles = 1 machine cycle
-    self.mcycle = 1
+    # clock counter and clock frequency
+    # the gameboy's cpu speed is technically 1 clock cycle = 4.19MHz
+    self.clock = 0
+    self.clockSpeed = 4
+
     # create buses
-    self.addressBus = GenericBus(16)
-    self.dataBus = GenericBus(c.WORD)
+    self.addressBus = GenericBus(16)      # specifies address/destination of data
+    self.dataBus    = GenericBus(c.WORD)  # actual data to transfer
+    self.controlLines = np.zeros(8)       # i/o pins to syncronize EVERYTHING
     # hold a reference to the system object to which this class belongs to
     self.sys = system
     # implementation of microprocessor modules of the cpu are kept separate
-    #   so create an object of it here
-    self.modules = mpModules.mpModules(self)
 
     #   REGISTERS
     self.reg = {
       # general purpose registers
-        'A' : np.zeros(c.WORD, dtype=np.byte),
-        'B' : np.zeros(c.WORD, dtype=np.byte),
-        'C' : np.zeros(c.WORD, dtype=np.byte),
-        'D' : np.zeros(c.WORD, dtype=np.byte),
-        'E' : np.zeros(c.WORD, dtype=np.byte),
-        'H' : np.zeros(c.WORD, dtype=np.byte),
-        'L' : np.zeros(c.WORD, dtype=np.byte),
+        'A' : np.zeros(c.WORD, dtype=np.uint8),
+        'B' : np.zeros(c.WORD, dtype=np.uint8),
+        'C' : np.zeros(c.WORD, dtype=np.uint8),
+        'D' : np.zeros(c.WORD, dtype=np.uint8),
+        'E' : np.zeros(c.WORD, dtype=np.uint8),
+        'H' : np.zeros(c.WORD, dtype=np.uint8),
+        'L' : np.zeros(c.WORD, dtype=np.uint8),
       # hidden registers, used by the control unit
       #   when 'concatenated', together they form one 16-bit address, WZ
       #   note: W is the higher half, Z is the lower half
-        'W' : np.zeros(c.WORD, dtype=np.byte),
-        'Z' : np.zeros(c.WORD, dtype=np.byte),
+        'W' : np.zeros(c.WORD, dtype=np.uint8),
+        'Z' : np.zeros(c.WORD, dtype=np.uint8),
       # special registers
-        'F' : np.zeros(c.WORD, dtype=np.byte),  # Flag register
-        'SP': np.zeros(c.DWORD, dtype=np.byte), # Stack Pointer register
-        'IR': np.zeros(c.WORD, dtype=np.byte),  # Instruction Register,
-                                                #   stores copy of instruction to be executed
-        #'PC': np.zeros(c.DWORD, dtype=np.byte)  # Program Counter register,
-                                                #   holds address of next instruction to be executed
-        'PC': 0
+        'F' : np.zeros(c.WORD, dtype=np.uint8),   # Flag register
+        'SP': np.zeros(c.DWORD, dtype=np.uint8),  # Stack Pointer register
+        'IR': np.zeros(c.WORD, dtype=np.uint8),   # Instruction Register,
+                                                  #   stores copy of instruction to be executed
+        'PC': np.zeros(c.WORD, dtype=np.uint8)    # Program Counter register,
+                                                  #   holds address of next instruction to be executed
     }
 
   # start the cpu
@@ -139,12 +134,13 @@ class CPUModel(object):
     # create all the modules of the microprocessor as separate concurrent tasks.
     #   refer to diagram above
 
-    self.sys.tm.new(self.modules.A())   # A
-    self.sys.tm.new(self.modules.ACT()) # ACT
-    self.sys.tm.new(self.modules.CTRL())# CTRL, control section
-    self.sys.tm.new(self.modules.RAM()) # RAM
-    self.sys.tm.new(self.modules.TMP()) # TMP
-    self.sys.tm.new(self.modules.CU())  # CU, control unit
+    #self.sys.tm.new(self.modules.A())   # A
+    #self.sys.tm.new(self.modules.ACT()) # ACT
+    #self.sys.tm.new(self.modules.CTRL())# CTRL, control section
+    #self.sys.tm.new(self.modules.RAM()) # RAM
+    #self.sys.tm.new(self.modules.TMP()) # TMP
+    self.sys.tm.new(CU(self))  # CU, control unit
+    self.sys.tm.new(CLK(self)) # CLK, clock
     # note, tasks added last get executed first!
     # --- #
 
@@ -152,16 +148,22 @@ class CPUModel(object):
   #   here 4 clock cycles = 1 machine cycles
   #   this is our discrete time quantum
   def runClock(self):
-    self.ccycle += 1
-    if(self.ccycle > 4):
-      self.ccycle -= 4
-      self.mcycle += 1
+    self.clock += 1
+    if(self.clock > self.clockSpeed):
+      self.clock -= self.clockSpeed
+      self.ccycle += 1
+      if(self.ccycle == 3):
+        # flip the bit
+        self.controlLines[c.CLK] = (self.controlLines[c.CLK]<1)
+      elif(self.ccycle > 4):
+        # flip the bit
+        self.controlLines[c.CLK] = (self.controlLines[c.CLK]<1)
+        self.ccycle -= 4
 
   # reset the machine and clock cycle counters,
   #   call at beginning of every new instruction fetching
   def resetClock(self):
     self.ccycle = 1
-    self.mcycle = 1
 
   # CONVENIENCE FUNCTIONS
   # ----------------------------------------------------------------------- #

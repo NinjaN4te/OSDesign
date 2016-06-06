@@ -5,7 +5,23 @@ import numpy as np
 INSTRUCTIONSETPATH = './InstructionSet'
 
 # Instruction Set list index positions for the various elements
-ISMNEMONIC = 5
+INSTRSETMC1 = 2
+INSTRSETMC2 = 3
+INSTRSETMC3 = 4
+INSTRSETMNEMONIC = 5
+
+# control line/pins
+RST = 0 # perform hard reset
+MWR = 1 # write to lcd unit
+CLK = 2 # clock register (machine cycles)
+WR  = 3 # write to memory
+RD  = 4 # read from memory
+CS  = 5 # chip select
+
+# pin state
+LO = 0
+HI = 1
+
 
 # another table to convert a sequence of bits into either
 #   the destination/source registers, ALU operation, condition flags, etc

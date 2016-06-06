@@ -56,10 +56,11 @@ class System(object):
 
   def Start(self):
     # create all the task objects
-    # start the cpu
-    self.cpu.start()
+    # note, order is important, for now
     # start the disk
     self.disk.start()
+    # start the cpu
+    self.cpu.start()
     # start the mainloop of the task manager
     self.tm.mainloop()
 

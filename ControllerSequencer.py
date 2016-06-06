@@ -68,7 +68,7 @@ def updateFlags(flags, res, opr, Z=c.AFFC, N=c.AFFC, H=c.AFFC, C=c.AFFC):
   # zero flag
   if(Z == c.UNAF): Z = flags[ c.Z ]
   elif(Z == c.AFFC):
-    if(np.sum(res, dtype=np.byte, axis=0) == 0):
+    if(np.sum(res, dtype=np.uint8, axis=0) == 0):
       # set zero flag if the result is zero
       Z = 1     # zero flag
     else:

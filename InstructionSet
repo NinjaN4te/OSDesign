@@ -1,6 +1,6 @@
 opcode        operands  MC1   MC2   MC3   mnemonic    ;comments
 
-00DDD110      1I        M1R   MRD   ...   LD D,N      ;load 8 bit immediate into destination register
+00DDD110      1I        M1R    RD   ...   LD D,N      ;load 8 bit immediate into destination register
 10LLLSSS      00        M1R   ...   ...   ALU A,S     ;perform ALU operation with registers A and S, store in A
  
  
@@ -26,9 +26,9 @@ opcode        operands  MC1   MC2   MC3   mnemonic    ;comments
 ;   the external operation the instruction performs at the current machine cycle
 ;   ... - unused, ie: instruction has completed
 ;   M1R - the basic M1 cycle of fetch and decode
-;   MRD - memory read
-;   MWR - memory write
-;   IOR - I/O read
-;   IOW - I/O write
+;    RD - memory read
+;    WR - memory write
+;   MRD - read from display, graphical unit
+;   MWR - write to display, graphical unit
 ;   NON - no external operation, only internal computation, so no external effects
 ;   INT - interrupt cycle

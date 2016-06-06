@@ -31,73 +31,13 @@ class Decoder(object):    #{{{2
     #   the index of the opcode to execute and the byte of data (usually the instruction)
     #   itself to use. Use this table to determine which command to execute within
     #   the class
-    self.opcodeDict = {   # {{{3
-      'NOP'       : self.cu.ctrlSeq.nothing,
-      'LD (N),SP' : self.cu.ctrlSeq.nothing,
-      'LD R,N'    : self.cu.ctrlSeq.nothing,
-      'ADD HL,R'  : self.cu.ctrlSeq.nothing,
-      'LD (R),A'  : self.cu.ctrlSeq.nothing,
-      'LD A,(R)'  : self.cu.ctrlSeq.nothing,
-      'INC R'     : self.cu.ctrlSeq.nothing,
-      'DEC R'     : self.cu.ctrlSeq.nothing,
-      'INC D'     : self.cu.ctrlSeq.nothing,
-      'DEC D'     : self.cu.ctrlSeq.nothing,
-      'LD D,N'    : self.cu.ctrlSeq.LDDN,
-      'RdCA': self.cu.ctrlSeq.nothing,
-      'RdA': self.cu.ctrlSeq.nothing,
-      'STOP': self.cu.ctrlSeq.nothing,
-      'JR N': self.cu.ctrlSeq.nothing,
-      'JR F,N': self.cu.ctrlSeq.nothing,
-      'LDI (HL),A': self.cu.ctrlSeq.nothing,
-      'LDI A,(HL)': self.cu.ctrlSeq.nothing,
-      'LDD (HL),A': self.cu.ctrlSeq.nothing,
-      'LDD A,(HL)': self.cu.ctrlSeq.nothing,
-      'DAA': self.cu.ctrlSeq.nothing,
-      'CPL': self.cu.ctrlSeq.nothing,
-      'SCF': self.cu.ctrlSeq.nothing,
-      'CCE': self.cu.ctrlSeq.nothing,
-      'LD D,D': self.cu.ctrlSeq.nothing,
-      'HALT': self.cu.ctrlSeq.nothing,
-      'ALU A,D': self.cu.ctrlSeq.nothing,
-      'ALU A,N': self.cu.ctrlSeq.nothing,
-      'POP R': self.cu.ctrlSeq.nothing,
-      'PUSH R': self.cu.ctrlSeq.nothing,
-      'RST N': self.cu.ctrlSeq.nothing,
-      'RET F': self.cu.ctrlSeq.nothing,
-      'RET': self.cu.ctrlSeq.nothing,
-      'RETI': self.cu.ctrlSeq.nothing,
-      'JP F,N': self.cu.ctrlSeq.nothing,
-      'JP N': self.cu.ctrlSeq.nothing,
-      'CALL F,N': self.cu.ctrlSeq.nothing,
-      'CALL N': self.cu.ctrlSeq.nothing,
-      'ADD SP,N': self.cu.ctrlSeq.nothing,
-      'LD HL,SP+N': self.cu.ctrlSeq.nothing,
-      'LD (FF00+N),A': self.cu.ctrlSeq.nothing,
-      'LD A,(FF00+N)': self.cu.ctrlSeq.nothing,
-      'LD (C),A': self.cu.ctrlSeq.nothing,
-      'LD A,(C)': self.cu.ctrlSeq.nothing,
-      'LD (N),A': self.cu.ctrlSeq.nothing,
-      'LD A,(N)': self.cu.ctrlSeq.nothing,
-      'JP HL': self.cu.ctrlSeq.nothing,
-      'LD SP,HL': self.cu.ctrlSeq.nothing,
-      'DI': self.cu.ctrlSeq.nothing,
-      'EI': self.cu.ctrlSeq.nothing,
-      'RdC D': self.cu.ctrlSeq.nothing,
-      'Rd D': self.cu.ctrlSeq.nothing,
-      'SdA D': self.cu.ctrlSeq.nothing,
-      'SWAP D': self.cu.ctrlSeq.nothing,
-      'SRL D': self.cu.ctrlSeq.nothing,
-      'BIT N,D': self.cu.ctrlSeq.nothing,
-      'BIT N,D': self.cu.ctrlSeq.nothing,
-      'RES N,D': self.cu.ctrlSeq.nothing,
-      'SET N,D':self.cu.ctrlSeq.nothing
-    }
-    #}}}3
 
   # parse binary machine code into opcodes and operands
   # ----------------------------------------------------------------------- #
   def parseByte(self, byte):
-    self.cu.instr = self.optab.instrSet[0][c.ISMNEMONIC]
+    #self.cu.instr = self.optab.instrSet[0][c.INSTRSETMNEMONIC]
+    self.cu.instr = byte
+    self.cu.nextOp = self.optab.instrSet[0][c.INSTRSETMC2]
   #}}}2
 
   def executeSeq(self, opcode, byte):
