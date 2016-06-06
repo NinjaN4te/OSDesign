@@ -1,6 +1,6 @@
 """
 This program will create a data file in the format of
-Process ID, Arrival Time, IO Burst, CPU Burst
+Process ID, Arrival Time, CPU Burst, IO Burst
 """
 from random import randint #imports the random functions
 file = open("DataFile3.txt","w+") #creates a datafile w+ to create and modify values
@@ -16,6 +16,6 @@ while (pid <= 3): #loop for pid to be 1000
     for y in range (0,y):
         cpu = randint(1,20)
         io = randint(1,20)
-        file.write("%i,%i," % (io,cpu)) #writes to file the io and cpu burst times
+        file.write("%i,%i," % (cpu,io)) #writes to file the io and cpu burst times
     file.write("\n") #new line once yrange is finished
 file.close() #close file
